@@ -6,7 +6,7 @@ Portable (running out of the box if Java is installed)
 
 git clone https://github.com/nilqed/abcl_maxima.git
 cd abcl_maxima
-build_maxima.(sh|cmd)
+build_maxima.(sh|cmd)  # once or as needed
 maxima.(sh|cmd)
 
 ABCL ...... https://abcl.org/

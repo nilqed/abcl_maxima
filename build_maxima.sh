@@ -8,4 +8,4 @@ cd src
 java -jar ../../$ABCL/abcl.jar --eval "(progn (load \"maxima-build.lisp\") (maxima-compile) (quit))"
 cd ../..
 echo $MAXIMA build completed.
-echo run MAXIMA with maxima.cmd
+echo run MAXIMA by maxima.sh
