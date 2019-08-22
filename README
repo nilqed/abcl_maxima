@@ -11,7 +11,7 @@ maxima.(sh|cmd)
 
 ABCL ...... https://abcl.org/
 MAXIMA .... http://maxima.sourceforge.net/
-
+MMA4MAX ... https://people.eecs.berkeley.edu/~fateman/lisp/mma4max/
 
 
 .. Maxima can be built using a purely Lisp-based procedure.
@@ -374,5 +374,15 @@ CL-USER(3): (ql:system-apropos :snark)
 #<QL-DIST:SYSTEM snark-sparse-array / snark-20160421-git / quicklisp 2019-08-13>
 CL-USER(4): 
 
+
+MMA4MAX (by RJF)
+----------------
+See README in folder mma4max and
+    ... implementation_notes.txt
+	... usingfrommax.txt
+	... writest etc.
+	
+buid_mma4max ...... load init and compile-mma
+mma4max ........... load init, load-mma, tl
 
 

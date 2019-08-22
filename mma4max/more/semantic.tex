@@ -1,0 +1,371 @@
+
+proposal for semantic matching a la Macsyma, expanded by
+ideas in Milind Joshi's MS, and Maple's program.
+
+Basic idea: ignore the ``forms'' of the expression,
+but see what you can make of the results of solving equations 
+derived in different ways from the pattern and the expression.
+
+This is pretty much unable to deal with side conditions on the
+variables in the match that occur in some other models of matching.
+
+Using solve, or an equivalent program is one of the
+ways that
+ Maple's  match works.
+
+First a few examples to show
+how result := match(f(x),pat(x),x) works.
+[[Maple syntax is match(f=pat,x,'result') ]]
+
+pat(x) is an expression involving x and perhaps other symbols and constants
+  example: (a*x^2+b*x+c) 
+
+f(x) is an expression involving x and perhaps other symbols
+  example: (3*x^2+4*x+5)
+
+The matching of f and pat results in a list of equations such as
+  {c = 5, b = 4, a = 3}.
+
+A more elaborate match that demonstrates some of the
+underlying power that is available: Let
+ f= (x+Pi)*(x+s+9).  Then matched with pat, it gives:
+
+  {c = Pi*s + 9*Pi, b = 9 + Pi + s, a = 1}
+
+
+Operationally, all names in pat other than the distinguished anchor, x
+are pattern variables. The items in the expression that they are
+matched to cannot depend upon the anchor.
+
+
+How far should this go?
+
+match(sin(x),cos(x+a),x) --> {a=-Pi/2 or many other values}  ?  (maple: no)
+
+(maple can solve sin(x)=cos(x+a) for a, but doesn't use this info.)
+
+match(sin(x), f(x),x)  -->   {f=sin}    ?  (maple: no)
+
+(If the pattern includes unknown functions like f(x), f could be
+a pattern variable too. Again, solve finds a solution, but it is not used.)
+
+What Does it do?
+
+Let us try to solve f(x)-pat(x) = 0  for all x.
+
+If f and pat are both polynomials, or can be reduced to
+polynomials we have this reduction:
+Solve the set of (in general, non-linear) equations formed by
+computing f-pat.  It is a polynomial of degree n, for some
+particular integer n.  For each coefficient in the expansion 
+Sum(a_i*x^i, i=0.. n), set an equation a_i=0.  Solve the system
+of equations {a_i}.
+
+Short cuts:  If there are any impossible conditions such as 1=0,
+the pattern fails. If there are simple (one variable) equations
+such as (a-3=0), solve them immediately.
+Look for sparse solutions.
+If there are only linear equations, use a linear system solver.
+Use a non-linear solver only if necessary.
+
+If f and/or pat are rational functions, considered as functions of
+x, then f1/f2=pat1/pat2, so cross multiply and solve f1*pat2-f2*pat1=0
+as before.  Before returning the result, do we need to insure that 
+pat2 (and hence f2) is not zero?
+
+If pat is NOT a polynomial or rational function, considered
+as functions of x, then it may be that they agree as common functions,
+e.g. cos(polynomial) = cos(polynomial).  recursively decompose them.
+
+But what if they are not common functions, for example
+
+sin(x) matching against the pattern cos(x+a)?
+
+
+Attempt to expand the function f-pat  in a series about x=0, and
+set each coefficient to zero.  In this case,
+
+series(sin(x)-cos(x+a),x); -->
+                                              2                         3
+      - cos(a) + (sin(a) + 1) x + 1/2 cos(a) x  + (- 1/6 sin(a) - 1/6) x + ...
+
+Thus solving (-cos(a)=0,a) gives the needed answer for a.  In general
+it may not be possible to expand, or the (infinite) system of
+equations given by setting each coefficient to zero may be inconsistent.
+Presumably solving some truncated subset of the system would work to obtain
+some answers, and some additional number of coefficients would be used
+for checking.
+
+This is a pretty powerful technique, and can be used for matching
+match(exp(I*x*a),cos(x*b)+I*sin(x*c);  (maple:no)
+for {b = a, c = a}.
+
+This technique will not work for functions that cannot be expanded
+in power series adequately, such as x^n.  If this function appears
+in isolation (match (x^3 , x^n)) then it  is easy by a previous method.
+
+Or they may be sums, products, powers, (quotients) of such items
+composed with polynomials or rational functions.  For example,
+
+match x^7*cos(4*x) to the pattern h*x^n*cos(a*x+b)  (maple: yes)
+
+Here's a toughie from an actual integral table. (maple:no) this expression
+
+                                 3        3
+                               (x  - 8) (x  - 1)
+                               -----------------
+                                (x - 2) (x - 1)
+
+should match this pattern.
+
+                                 p    p    p
+                               (x  - q ) (x  - 1)
+                               ------------------
+                                 (x - q) (x - 1)
+
+
+Though if you simplify the first of these you get
+
+			    4	   3	  2
+ 			   x  + 3 x  + 7 x  + 6 x + 4
+
+and it is unlikely to match the simplified form of the pattern
+
+			    2 p	      p	      p	   p
+			   x    + (- q  - 1) x  + q
+ 			   -------------------------
+			      2
+			     x  + (- q - 1) x + q
+
+
+Macsyma and Mathematica
+are able to match an instance of this equation if p and q are
+``symbolic'' but not numeric, It appears that Maple is not able
+to do this.
+
+In particular it seems that without help, matching
+the pattern x+a^b  to x+q is likely not going to work.
+And no system I've tried will match this even with considerable
+help: namely using the pattern a*x+a^b, to match against 2*x+8, 
+
+
+
+
+
+
+From kogeddes@fenwaysparc.CS.Berkeley.EDU Fri Sep 30 16:11:27 1994
+Received: from hofmann.CS.Berkeley.EDU (hofmann.CS.Berkeley.EDU [128.32.34.35]) by centralsparc.CS.Berkeley.EDU (8.6.9/8.6.9) with ESMTP id QAA10764 for <fateman@centralsparc.CS.Berkeley.EDU>; Fri, 30 Sep 1994 16:11:26 -0700
+Received: from fenwaysparc.CS.Berkeley.EDU (fenwaysparc.CS.Berkeley.EDU [128.32.32.29]) by hofmann.CS.Berkeley.EDU (8.6.9/8.6.6.Beta11) with ESMTP id QAA05479 for <fateman@CS.Berkeley.EDU>; Fri, 30 Sep 1994 16:24:47 -0700
+Received: (from kogeddes@localhost) by fenwaysparc.CS.Berkeley.EDU (8.6.9/8.6.9) id QAA07059; Fri, 30 Sep 1994 16:11:21 -0700
+Date: Fri, 30 Sep 1994 16:11:21 -0700
+From: Keith Geddes <kogeddes@CS.Berkeley.EDU>
+Message-Id: <199409302311.QAA07059@fenwaysparc.CS.Berkeley.EDU>
+To: fateman@CS.Berkeley.EDU
+Subject: Re:  matching in Maple
+Cc: kogeddes@fenwaysparc.CS.Berkeley.EDU
+Status: R
+
+Richard, just in case it is of interest, below is the complete source code
+for "match".  While any user can print out this procedure from a Maple
+session, it comes without the comments.
+The comments are what might be of some interest.
+
+=============================================================================
+
+# $Source: /u2/maple/research/lib/src/RCS/match,v $
+#	
+#	A user does a pattern match by saying
+#	
+#	    match( e, v, 's' )
+#	
+#	Match returns true if the match was successful, false otherwise.
+#	If the match was successful, s is assigned (call by name)
+#	a substitution set described below.  e is an equation of the form
+#	expression = pattern_expression or expression = pattern_dictionary.
+#	v is a main variable, or a list or set of main variables.
+#	All name indets in op(2,e) which are not constants are assumed
+#	to be pattern variables, i.e. will be assigned some value to
+#	match the expression.
+#	
+#	Now, if op(2,e) is an expression, and the pattern match is successful,
+#	s is assigned a set of equations such that subs(s, op(2,e)) = op(1,e).
+#	    
+#	For example:
+#	
+#	   if match( e = A*ln(k)^P/k^Q, k, 's' ) then
+#	        RETURN( subs( s, (-1)^(P-1)*Zeta(P,Q) ) )
+#	
+#	So, e is the expression, A*ln(k)^P/k^Q is the pattern, k is a main
+#	variable, A,P,Q are pattern variables which can match any expression
+#	which is not a function of k.  For example, if e = ln(k)/k^(1/2) then
+#	s is assigned the set { A=1, P=1, Q=1/2 }, and the result of the
+#	subs above would be Zeta(1,1/2).
+#	
+#
+#	The algorithm is a variation of a polynomial time algorithm
+#	for algebraic pattern matching, by Monagan and Gonnet to
+#	be written in Michael Monagan's PhD thesis.
+#
+#					Gaston H. Gonnet (Aug 1987)
+#				Updated Gaston H. Gonnet (Apr 1989)
+#                                       $Notify: gonnet@inf.ethz.ch$
+#
+unprotect('match'):
+match := proc( e:algebraic=algebraic, vv:{name,set(name)}, s3:name )
+local i, p, r, r2, set1, set2, T, te1, te2, v, z, z2, z3;
+option `Copyright 1992 by the University of Waterloo`;
+# Should not have option remember since it is assigning s3
+#  as a side effect
+
+# Unravel arguments
+if type(vv,name) then v := {vv} else v := vv fi;
+if nops(v) < 1 then ERROR(`invalid arguments`) fi;
+if nops(v) > 1 then RETURN( `match/multi`( e, v, s3 ) ) fi;
+
+te1 := subs(v[1]=_X,op(1,e));
+te2 := op(2,e);
+
+# matching against a dictionary
+if type(te2,table) then
+    ERROR(`pattern matching against a dictionary is not implemente yet`) fi;
+
+# Matching against a single expression
+if type(te1,function) and type(te2,function) then
+    if nops(te1) = nops(te2) and op(0,te1)=op(0,te2) then
+	te1 := op(1,e);
+	r := {};
+	for i to nops(te1) do
+	    if not match( op(i,te1) = eval(subs(r,op(i,te2))), vv, 'p') then
+		RETURN( false ) fi;
+	    r := r union p
+	    od;
+	s3 := r;  RETURN( true )
+	fi;
+    RETURN( false )
+    fi;
+te2 := subs(v[1]=_X,te2);
+
+# Test inclusion/exclusion of functions in _X
+set1 := map( proc(z) if has(z,_X) then op(0,z) fi end, indets(te1,function) );
+set2 := map( proc(z) if has(z,_X) then op(0,z) fi end, indets(te2,function) );
+if set1 minus set2 <> {} then RETURN( false ) fi;
+if set2 minus set1 <> {} then
+    # Eliminate all those functions from the pattern
+    r := {};
+    for set2 in map(proc(z,f) if has(z,_X) and member(op(0,z),f) then z fi end,
+			indets(te2,function), set2 minus set1 ) do
+	p := `match/eliminate`( eval(subs(r,te2)), set2 );
+	if p=FAIL then RETURN( false ) fi;
+	r := r union p;
+	od;
+    if not match( te1 = eval(subs(r,te2)), v, 'p') then RETURN( false ) fi;
+    s3 := r union p;  RETURN( true )
+    fi;
+
+# Test functions which appear only once on each side
+set1 := map( proc(z) if has(z,_X) then z fi end, indets(te1,function) );
+set2 := map( proc(z) if has(z,_X) then z fi end, indets(te2,function) );
+set1 intersect set2;
+set1 := set1 minus ";  set2 := set2 minus "";
+r := {};
+r2 := {};
+for z in set2 do
+    if not member(op(0,z),map(<op(0,z)|z>,set2 minus {z})) then
+	# functions which appear only once on the rhs
+	# should be matched to something on the lhs
+	z2 := map( proc(x,y) if op(0,x)=y then x fi end,
+		subs(r,set1), op(0,z));
+	if nops(z2) > 1 then RETURN( false ) fi;
+	if z2 = {} then ERROR(`assertion failed`) fi;
+	if not match( subs(_X=v[1],z2[1]) = subs(r,_X=v[1],z), v, 'p') then
+		RETURN( false ) fi;
+	r2 := r2 union {z2[1]=`match/newX`, subs(r,z)=`match/newX`};
+	r := r union p;
+	fi
+    od;
+if r <> {} then
+    if nops(z2)=1 then
+	if match( subs(r2,te1)=subs(r2,r,te2), v union {`match/newX`}, 'z') 
+	then
+	    s3 := r union z;
+	    RETURN(true)
+	    fi
+	fi;
+    z2 := indets(te2,name) minus {_X};
+    z := normal(te1/subs(r,te2)-1);
+    if indets(z,name) intersect z2 = {} then
+	if z=0 then s3 := r;  RETURN( true ) else RETURN( false ) fi fi;
+    z := numer(z);
+    if type(z,`*`) then
+	z := map( proc(x,z2) if indets(x,name) intersect z2 = {} then
+		1 else x fi end, z, z2 ) fi;
+    # Try to make a new pattern matching equation
+    if type(z,`+`) then
+	z := 0 = -z;
+	for z3 in op(2,z) do
+	    if not has(z3,z2) then z := op(1,z)-z3 = op(2,z)-z3 fi od;
+	if indets(op(2,z),name) minus indets(te2,name) = {} then
+	    if match( subs(_X=v[1],z), v, 'p' ) then
+		s3 := p union r;  RETURN( true ) else RETURN( false ) fi
+	    fi
+	fi;
+    fi;
+
+if type(te2,polynom(anything, _X)) then
+    `match/poly`( te1, te2 )
+else
+    T[te2] := {};
+    `match/setup`( T );
+    `match/patmatch`( te1, T, 1 );
+    if has(",FAIL) then
+	`match/heuristic`( te1, te2 );
+	fi
+    fi;
+
+if has(",FAIL) then RETURN( false )
+else s3 := map( x ->
+		if not type(op(1,x),name) then
+		     s := [solve({x},indets(x,name) minus {_X})];
+		     if s=[] then x else op(s[1]) fi
+		else x fi, {op("[1][1])} );
+     true
+     fi
+
+end:
+protect(match):
+
+#########################################################
+#							#
+#  `match/multi`: match arguments on several variables	#
+#							#
+#########################################################
+`match/multi` := proc( e, v, s )
+local i, lhs, rhs, s1, s2, x, z2;
+option `Copyright 1993 Gaston Gonnet, Wissenschaftliches Rechnen, ETH Zurich`;
+
+lhs := op(1,e);
+rhs := op(2,e);
+z2 := indets(rhs,name) minus v;
+for x in v do if type(lhs,polynom(anything,x)) and
+		 type(rhs,polynom(anything,x)) then
+    s1 := {};
+    for i from 0 to max(degree(lhs,x),degree(rhs,x)) do
+	if not match( coeff(lhs,x,i)=coeff(rhs,x,i), v minus {x}, 's2' )
+	    then break fi;
+	s1 := s1 union s2
+	od;
+    if simplify(normal(subs(s1,rhs)-lhs))=0 then s := s1;  RETURN(true) fi;
+    fi od;
+false
+end:
+
+`match/Red1` := 'readlib('`match/Red1`')':
+`match/eliminate` := 'readlib('`match/eliminate`')':
+`match/heuristic` := 'readlib('`match/heuristic`')':
+`match/patmatch` := 'readlib('`match/patmatch`')':
+`match/poly` := 'readlib('`match/poly`')':
+`match/setup` := 'readlib('`match/setup`')':
+#savelib('match','`match/Red1`','`match/eliminate`',\
+	'`match/heuristic`','`match/patmatch`','`match/poly`',\
+	'`match/setup`','`match/multi`','`match.m`'):
+

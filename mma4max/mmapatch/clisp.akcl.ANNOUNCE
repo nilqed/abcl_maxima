@@ -1,0 +1,139 @@
+
+You can find MMA at ftp://carnet.hr:/pub/misc/math/mma15c09.tgz
+
+
+WHAT IS MMA?
+========================================================================
+
+MMA are the underpinnings of a common-lisp implementation of a small 
+and efficient algebra system. The intention is to be as fast as possible 
+without making major concessions to usefulness.  Absolute brevity in 
+code is not a goal, nor is complete perspicuity, if it is inconsistent 
+with efficiency.
+
+As far as efficiency goes, it is expected that for similar problems,
+the code would be faster than Macsyma's rational function package,
+Reduce, or Maple, and generally much faster than Mathematica and
+much^2 faster than Macsyma's general representation.
+
+It is our intention that no one would have any reasonable hope of
+making a package that was much faster, at least while coding in Lisp,
+and that there would be no need to look inside the package for most
+users. It is also our hope that even by going to C or assembly
+language, not much of a speedup could be expected.  Of course
+eliminating some features (e.g., going to fixed precision rather than
+arbitrary precision integers), can result in savings.
+
+How general a set of features do we need?  For example, I consider
+multi-variate polynomial arithmetic essential, as well as arbitrary
+precision integer coefficients.  By contrast, computation in
+non-commutative variables is not supported.  Although only a simple
+polynomial GCD is used, more elaborate and faster versions have been
+written (not debugged).
+
+
+Try the commands D[Log[x],x], Int[Log[x],x], Simp[(a+b)^2+1],
+RatExpand[(a+b)^2], sin[I], 4atan[1],
+
+
+IS MMA READY FOR FREE LISPS?
+=====================================================================
+
+
+                       ********************
+                       *                  *
+                       * Hello Math fans! *
+                       *                  *
+                       ********************
+
+Prof Richard J. Fateman made a great Mathematica(tm)-like program
+in lisp. Now it is small and has only basic functions, it certainly
+needs to grow... But that's probably a beginning of a long mathfree
+story.
+
+MMA has implemented just a small portion of the functions that real
+Mathematica(TM) offers.
+
+There are 4 different views of MMA:
+
+1. What works on free lisps
+---------------------------
+   (Mathematica(TM) script parser and nice formatted output,
+   polynomial handling, basic database for integration and
+   differentation; basic pattern matching, arithmetic simplification,
+   other odds and ends.)
+
+2. What works for Allegro lisp (Not free) and needs porting to free lisps
+-------------------------------------------------------------------------
+   (hashing table for the algebra for more efficent common subexpression
+    sharing.)
+
+3. What requires small effort to be done
+----------------------------------------
+   (adding new command-style functions, extending integration/derivation
+   database written in lisp)
+
+4. What requires greater effort to be done
+------------------------------------------
+   (Implementation of Mathematica(TM) control structure semantics
+   evaluator should be programmed to understand it;
+   Some advanced details in the pattern matcher.)
+
+
+Up to now, MMA works on following LISPs:
+=======================================================================
+1. Allegro LISP (MMA's was first written using this)
+2. KCL (AKCL)   (ported a few years ago to KCL, recently adapted for new AKCL)
+3. LUCID        (I haven't tried)
+4. CLISP        (recently done)
+=======================================================================
+
+_______________________ COMMENTS ON SPEED ________________________
+
+Now, the situation looks like this: Let's try to put WRI down from
+the 1st place by beating it with the freely redistributable LISPs!!
+
+Machine: 486dx2-50 with few wait states, 8M RAM 256K cache.
+Test sample: Timing[RatExpand[(x+y+z)^15];done]
+                                         
+1. Mathematica 2.0 (DOS) for 386/387     0.6  seconds
+2. CLISP compiled (Linux)                1.12 seconds
+3. AKCL compiled (Linux)                 1.55 seconds
+4. CLISP interpreted (Linux)            13.8  seconds
+5. AKCL interpreted (Linux)             66.7  seconds
+
+Allegro LISP (not free) already beats Mathematica(TM) on the same
+machine.  This is probably because of more optimized compiling and
+an efficient representation of integers, but perhaps the use of 
+unique-consing by hash-table storage of parts of the data also 
+contributes to speed.  Our free domain LISPs can be faster than
+that if we port the hashing algorithm or (more likely) produce more
+optimized code that could run the code 2x faster :>.
+
+"Native lisp" of MMA is Allegro CL, and for it a highly optimized 
+hcons1.lisp is written. For others (and CLISP) we use hconsalt.lisp 
+which is common-lisp compatible but much slower.
+
+If there is some CLISP/KCL expert, it would be good that he/she :) 
+writes a CLISP version of hcons1.lisp.
+
+______________________________ * * * ________________________________
+
+
+There is some more documentation at peoplesparc.berkeley.edu, on 
+polynomial arithmetic and display at .../pub/papers/[lai.tex, tak.tex]
+
+Send your patches, bug reports, new whole routines, documentation or
+whatever about MMA to me. If, after studying the code for a while
+(there are many comments in it), you have specific questions about
+the MMA insides you can contact 
+Professor Richard J. Fateman, <fateman@cs.berkeley.edu>.
+
+Have a nice math meditation.
+Davor.
+--
+Davor    , Dept of FEP, IRB | Physics, Energetics, Application
+Jadrijevic POB 1016         | Institute "Rudjer Boskovic"
+           Bijenicka 54a    | Tel: +385 41 461079  => <davj@apoirb.irb.hr>
+           HR-41001 Zagreb  | Croatia | <davor%emard.uucp@ds5000.irb.hr>
+--------------------------------------------------------------------------

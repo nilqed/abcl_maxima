@@ -1,0 +1,237 @@
+
+                       ********************
+                       *                  *
+                       * Hello Math fans! *
+                       *                  *
+                       ********************
+
+Prof Richard J. Fateman made a great Mathematica(tm)-like program
+in lisp. Now it is small and has only basic functions, it certainly
+needs to grow... But that's probably a beginning of a long mathfree
+story.
+
+MMA has implemented just a small portion of the functions that real
+Mathematica(TM) offers.
+
+There are 4 different views of MMA:
+
+1. What works on free lisps
+---------------------------
+   (Mathematica(TM) script parser and nice formatted output,
+   polynomial handling, basic database for integration and
+   differentation; basic pattern matching, arithmetic simplification,
+   other odds and ends.)
+
+2. What works for Allegro lisp (Not free) and needs porting to free lisps
+-------------------------------------------------------------------------
+   (hashing table for the algebra for more efficent common subexpression
+    sharing.)
+
+3. What requires small effort to be done
+----------------------------------------
+   (adding new command-style functions, extending integration/derivation
+   database written in lisp)
+
+4. What requires greater effort to be done
+------------------------------------------
+   (Implementation of Mathematica(TM) control structure semantics
+   evaluator should be programmed to understand it;
+   Some advanced details in the pattern matcher.)
+
+
+Up to now, MMA works on following LISPs:
+=======================================================================
+1. Allegro LISP (MMA's was first written using this)
+2. KCL (AKCL)   (ported a few years ago to KCL, recently adapted for new AKCL)
+3. LUCID        (I haven't tried)
+4. CLISP        (recently done)
+=======================================================================
+
+Linux seems to spread all over like algea, here are some hints for
+Linuxers on how to get LISPs. Other UN*X'es should also do, but I 
+don't keep track on where their LISPs are. There is nothing Linux
+specific in MMA.
+
+There is a perspective CLISP with tightly up-to-date Linux and
+MANY OTHER PLATFORMS support (including DOS and similar not-unixes) at
+=================================
+ma2s2.mathematik.uni-karlsruhe.de
+=================================
+I am using binary version from end January 1994 compiled with gcc 2.5.8 
+and linked dynamically with libc 2.5.19. Has gnu readline.
+
+There is also AKCL (not so up-to-date):
+================================================================================
+AKCL (Austin Kyoto Common Lisp)  Version(1.615) Mon Apr 26 16:23:15 MET DST 1993
+Contains Enhancements by W. Schelter
+================================================================================
+Binary sits on sunsite.unc.edu:/pub/Linux/devel/lisp/akcl-bin.tar.z, 2.4MB
+long statically linked exe compiled with gcc 2.3.3 and libc 4.3.3, no
+gnu readline :(.
+
+_____________________ DISTRIBUTION INSTRUCTIONS _______________________
+
+If you obtain full distribution, with *.lisp and *.lisp.orig files
+that means that the files are already patched and you should not do
+the patching!! (You can skip 'patch instructions'). Applying patch 
+2nd time can make MMA unuseable. If it happens by mistake, copy 
+*.lisp.orig to *.lisp files and patch cleanly.
+
+_________________________ PATCH INSTRUCTIONS __________________________
+
+Extract the mma-1.5 package, enter its directory, copy the file
+emardpatch.diff into it, and from there start
+
+$ emardpatch.sh
+
+This shell script will create soft links *.lsp to the *.lisp files
+because KCL and CLISP like *.lsp extensions, with exception of init.lsp, 
+that is soft link to init2.lisp because KCL autostarts by loading "init.lsp"
+which would use Allegro otimized hashing tables. That works on Allegro
+only, no KCL/CLISP port up to now.
+
+The files that belong to CLISP/AKCL patch:
+
+emardpatch.diff   - context 'diff' file that is read by 'patch'
+                    to change the original code to work under
+                    CLISP and AKCL.
+
+emardpatch.sh     - shell script that will perform everything for you.
+                    Of course, make sure you have 'patch' installed.
+                    I use GNU patch 2.1.
+
+makepatch.sh      - Useful for creating fresh context 'diff' after
+                    interventions into the code.
+
+clisp.akcl.README - this file
+_____________________________ AKCL LISP ________________________________
+
+Type 'kcl'; it should write messages as it loads MMA lisp modules. 
+If you prefer manual load, delete init.lsp link and type at KCL prompt:
+
+>(load "init2")
+
+After succesful load, you can enter mathematica top-level by typing at 
+KCL prompt:
+
+>(tl)
+Mock-Mma (Sun-4) 2.0 (Oct-03-1991) [With pre-loaded data]
+  Possibly Copyright 1990-1991 U.C.Berkeley
+   -- Terminal graphics initialized --
+
+In[1] :=
+In[2] := RatExpand[(x+y+z)^2]/(t-1)
+
+          2            2                    2
+         X  + 2 X Y + Y  + (2 X + 2 Y) Z + Z
+OUT[2] = ------------------------------------
+                        -1 + T
+In[3] :=
+
+KCL at Linux is very slow in interpreter mode (5x slower than CLISP
+interpreted). If one wants to compile, each file from init2.lsp
+compile list should be compiled by hand, except init2.lsp itself.
+Init2.lsp just loads the modules. Never mind about the warnings. These
+are mostly from unused variables.
+
+Compiled code on dx2-50 and 8M RAM gives:
+
+In[2] := Timing[RatExpand[(x+y+z)^15];done]
+
+OUT[2] = 1.55 SECOND[DONE]
+
+______________________________ CLISP ____________________________________
+
+CLISP likes *.lsp too. Patched MMA will also compile on CLISP
+(with certain amount of warnings, but never mind). 
+
+*** IMPORTANT ***
+*** I have used some CLISP features recently implemented. Please
+*** obtain CLISP release from January 1994 or later.
+
+$ clisp
+
+> (compile-file "init2") 
+; that is automated compilation batch for MMA suite.
+; if you want run in interpreter mode (MMA cca 10x SLOWER)
+; then skip compile line
+
+... messages and warnings (mostly unused vars, just ignore).
+
+> (load "init2")
+
+... messages about loaded parts
+
+> (tl)
+Mock-Mma (Sun-4) 2.0 (Oct-03-1991) [With pre-loaded data]
+  Possibly Copyright 1990-1991 U.C.Berkeley
+   -- Terminal graphics initialized --
+
+In[1] := RatExpand[(x+y+z)^2]/(t-1)
+
+          2            2                    2
+         X  + 2 X Y + Y  + (2 X + 2 Y) Z + Z
+OUT[1] = ------------------------------------
+                        -1 + T
+In[2] :=
+
+_______________________ COMMENTS ON SPEED ________________________
+
+Now, the situation looks like this: Let's try to put WRI down from
+the 1st place by beating it with the freely redistributable LISPs!!
+
+Machine: 486dx2-50 with few wait states, 8M RAM 256K cache.
+Test sample: Timing[RatExpand[(x+y+z)^15];done]
+                                         
+1. Mathematica 2.0 (DOS) for 386/387     0.6  seconds
+2. CLISP compiled (Linux)                1.12 seconds
+3. AKCL compiled (Linux)                 1.55 seconds
+4. CLISP interpreted (Linux)            13.8  seconds
+5. AKCL interpreted (Linux)             66.7  seconds
+
+Allegro LISP (not free) already beats Mathematica(TM) on the same
+machine.  This is probably because of more optimized compiling and
+an efficient representation of integers, but perhaps the use of 
+unique-consing by hash-table storage of parts of the data also 
+contributes to speed.  Our free domain LISPs can be faster than
+that if we port the hashing algorithm or (more likely) produce more
+optimized code that could run the code 2x faster :>.
+
+"Native lisp" of MMA is Allegro CL, and for it a highly optimized 
+hcons1.lisp is written. For others (and CLISP) we use hconsalt.lisp 
+which is common-lisp compatible but much slower.
+
+If there is some CLISP/KCL expert, it would be good that he/she :) writes 
+a CLISP version of hcons1.lisp.
+
+________________________ COMMENTS ON THIS PATCH _________________________
+
+The main problem was case sensitivity. CLISP hasn't yet implemented 
+":INVERT" for readtable, and for KCL I don't know how to do that at
+all. I replaced "Set" and "Equal" with "|Set|" and "|Equal|" and cleaned 
+something else related to this.
+
+There is some more documentation at peoplesparc.berkeley.edu, on 
+polynomial arithmetic and display at ~ftp/pub/papers/[lai.tex, tak.tex]
+
+I kept in mind to use #+/- in order to keep the source working on 
+other platforms, even after application of my patch.
+
+I'm not an LISP expert by a long shot. My LISP experience comes from
+programming simple apps in AutoLisp for AutoCad :), neither I have
+much experience on Computer Algerbra System, but I like that stuff.
+
+Send your patches, bug reports, new whole routines, documentation or
+whatever about MMA to me. If, after studying the code for a while
+(there are many comments in it), you have specific questions about 
+the MMA insides you can contact 
+Professor Richard J. Fateman, <fateman@cs.berkeley.edu>.
+
+Have a nice math meditation.
+Davor.
+--
+Davor    , Dept of FEP, IRB | Physics, Energetics, Application
+Jadrijevic POB 1016         | Institute "Rudjer Boskovic"
+           Bijenicka 54a    | Tel: +385 41 461079  => <davj@apoirb.irb.hr>
+           HR-41001 Zagreb  | Croatia | <davor%emard.uucp@ds5000.irb.hr>
+--------------------------------------------------------------------------

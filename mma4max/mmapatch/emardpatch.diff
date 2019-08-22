@@ -1,0 +1,653 @@
+*** eval.lisp.orig	Sun Feb 20 22:11:41 1994
+--- eval.lisp	Wed Feb 23 21:49:08 1994
+***************
+*** 17,30 ****
+  (declaim (special
+           AddTo Alias And Apply Blank BlankNullSequence BlankSequence 
+  	 CompoundExpression Condition Delayed Derivative DivideBy Dot
+! 	 Equal Factorial Factorial2 Function Greater GreaterEqual 
+! 	 If In Increment
+! 	 Inequality Integer Less LessEqual List Map MapAll MessageName
+  	 NonCommutativeMultiply Not Null Optional Or Out Part Pattern
+  	 PatternTest Plus Power PreDecrement PreIncrement Put PutAppend
+  	 Real Repeated RepeatedNull Replace ReplaceAll ReplaceRepeated
+! 	 Rule RuleDelayed SameQ Sequence Set SetDelayed Slot SlotSequence
+! 	 SubtractBy TagSet 
+  	 TagSetDelayed Times TimesBy UnAlias Unequal UnSameQ UnSet
+  	 UpSet UpSetDelayed 
+  	 $Line  ))
+--- 17,36 ----
+  (declaim (special
+           AddTo Alias And Apply Blank BlankNullSequence BlankSequence 
+  	 CompoundExpression Condition Delayed Derivative DivideBy Dot
+! #-(or kcl clisp) Equal
+! #+(or kcl clisp) |Equal| 
+! 	 Factorial Factorial2 Function Greater GreaterEqual 
+! 	 If In Increment Inequality
+! #-(or kcl clisp) Integer
+! #+(or kcl clisp) |Integer|
+! 	 Less LessEqual List Map MapAll MessageName
+  	 NonCommutativeMultiply Not Null Optional Or Out Part Pattern
+  	 PatternTest Plus Power PreDecrement PreIncrement Put PutAppend
+  	 Real Repeated RepeatedNull Replace ReplaceAll ReplaceRepeated
+! 	 Rule RuleDelayed SameQ Sequence
+! #-(or kcl clisp) Set
+! #+(or kcl clisp) |Set|
+! 	 SetDelayed Slot SlotSequence SubtractBy TagSet 
+  	 TagSetDelayed Times TimesBy UnAlias Unequal UnSameQ UnSet
+  	 UpSet UpSetDelayed 
+  	 $Line  ))
+***************
+*** 45,61 ****
+      (declare (special env *package*))
+      (if (= COUNT 1)
+        (format t 
+! 	  "Mock-Mma (Sun-4) 2.0 (Oct. 3,, 1991) [With pre-loaded data]
+    Possibly Copyright 1990-1991 U.C.Berkeley
+     -- Terminal graphics initialized -- ~%"))
+      (loop
+       (setq timesofar (get-internal-run-time))
+     (format t "~%In[~s] := " COUNT)  ;; actually In and Out are variables too.
+! #-kcl   (setq hin (multiple-value-bind
+  	      (isnoerr val)
+  	      (errorset (mma::p)t)
+  	      (if isnoerr val (clear-input t))))
+  
+  #+kcl   (setq hin (multiple-value-bind
+  	  (iserr val)
+  	  (system:error-set '(mma::p))
+--- 51,75 ----
+      (declare (special env *package*))
+      (if (= COUNT 1)
+        (format t 
+! 	  "Mock-Mma (Sun-4) 2.0 (Oct-03-1991) [With pre-loaded data]
+    Possibly Copyright 1990-1991 U.C.Berkeley
+     -- Terminal graphics initialized -- ~%"))
+      (loop
+       (setq timesofar (get-internal-run-time))
+     (format t "~%In[~s] := " COUNT)  ;; actually In and Out are variables too.
+! #-(or kcl clisp)   (setq hin (multiple-value-bind
+  	      (isnoerr val)
+  	      (errorset (mma::p)t)
+  	      (if isnoerr val (clear-input t))))
+  
++ ;#+clisp (setq hin (multiple-value-bind
++ ;	(list)
++ ;	(list)
++ ;	(ignore-errors (mma::p))
++ ;	))
++ 
++ #+clisp (setq hin (ignore-errors (mma::p)))
++ 
+  #+kcl   (setq hin (multiple-value-bind
+  	  (iserr val)
+  	  (system:error-set '(mma::p))
+***************
+*** 64,74 ****
+     (SetQQ (ulist 'In COUNT) hin)
+     ;;   (setq h (simp(meval hin))) ;; if you don't have errorset, try this.
+  
+! #-kcl   (setq h (multiple-value-bind
+  	    (isnoerr val)
+  	    (errorset (meval hin) t)
+  	    (if isnoerr val (list 'Hold hin))))
+  
+  #+kcl   (setq h (multiple-value-bind
+  	(iserr val)
+  	(system:error-set (list 'meval (list 'quote hin)))
+--- 78,90 ----
+     (SetQQ (ulist 'In COUNT) hin)
+     ;;   (setq h (simp(meval hin))) ;; if you don't have errorset, try this.
+  
+! #-(or kcl clisp)   (setq h (multiple-value-bind
+  	    (isnoerr val)
+  	    (errorset (meval hin) t)
+  	    (if isnoerr val (list 'Hold hin))))
+  
++ #+clisp (setq h (meval hin))
++ 
+  #+kcl   (setq h (multiple-value-bind
+  	(iserr val)
+  	(system:error-set (list 'meval (list 'quote hin)))
+***************
+*** 89,98 ****
+  	  (cond((eq h 'Null) nil)
+  	       ;; don't print nil-valued answers
+  	       (t
+! 		(setq hs (list 'Set (ulist 'Out COUNT) h))
+  		(disp (BuildFormat hs))
+  ))))
+!    (Set  '$Line (setq COUNT (1+ COUNT))))))
+  
+  ;; this definition replaces the program in the parser file
+  
+--- 105,120 ----
+  	  (cond((eq h 'Null) nil)
+  	       ;; don't print nil-valued answers
+  	       (t
+!                 (setq hs (list 
+! #-(or kcl clisp)	'Set 
+! #+(or kcl clisp)	'|Set|
+! 			(ulist 'Out COUNT) h))
+  		(disp (BuildFormat hs))
+  ))))
+!    (
+! #-(or kcl clisp)	Set 
+! #+(or kcl clisp)	|Set|
+!   '$Line (setq COUNT (1+ COUNT))))))
+  
+  ;; this definition replaces the program in the parser file
+  
+***************
+*** 178,184 ****
+  ;; alternatively, we can set *evalonce* to t, and (vastly)
+  ;; change the semantics. Sometimes this vast change is no change at all....
+  
+! (defun holdfirstp(h)(member h '(Set) :test #'eq)); for now
+  
+  ;; evaluate args, depending on the hold-specs of the head
+  
+--- 200,209 ----
+  ;; alternatively, we can set *evalonce* to t, and (vastly)
+  ;; change the semantics. Sometimes this vast change is no change at all....
+  
+! (defun holdfirstp(h)(member h
+! #-(or kcl clisp) '(Set)
+! #+(or kcl clisp) '(|Set|)
+! 	:test #'eq)); for now
+  
+  ;; evaluate args, depending on the hold-specs of the head
+  
+***************
+*** 193,199 ****
+  ;; (a) capitalization is observed  OR
+  ;; (b) the package system is protecting it..
+  
+! (defun Set (lhs rhs &aux h fun);; lhs=rhs
+    
+    ;; the value associated with the lhs will be stored
+    ;; in the symbol table symtab, with the key h,
+--- 218,227 ----
+  ;; (a) capitalization is observed  OR
+  ;; (b) the package system is protecting it..
+  
+! (defun 
+! #-(or kcl clisp) Set
+! #+(or kcl clisp) |Set|
+! 	(lhs rhs &aux h fun);; lhs=rhs
+    
+    ;; the value associated with the lhs will be stored
+    ;; in the symbol table symtab, with the key h,
+***************
+*** 483,489 ****
+  (SetAttribute 'If 'HoldRest)
+  (SetAttribute 'Condition 'HoldRest)
+  
+! #-kcl(SetAttribute 'Set 'HoldFirst) ;; we don't use this -- Set is in Lisp
+  (SetAttribute 'SetDelayed 'HoldAll)
+  (SetAttribute 'UpSet 'HoldFirst)
+  (SetAttribute 'UpSetDelayed 'HoldAll)
+--- 511,518 ----
+  (SetAttribute 'If 'HoldRest)
+  (SetAttribute 'Condition 'HoldRest)
+  
+! #-(or kcl clisp) (SetAttribute 'Set 'HoldFirst) ;; we don't use this -- Set is in Lisp
+! #+(or kcl clisp) (SetAttribute '|Set| 'HoldFirst)
+  (SetAttribute 'SetDelayed 'HoldAll)
+  (SetAttribute 'UpSet 'HoldFirst)
+  (SetAttribute 'UpSetDelayed 'HoldAll)
+*** init2.lisp.orig	Sun Feb 20 22:11:41 1994
+--- init2.lisp	Wed Feb 23 21:50:14 1994
+***************
+*** 1,7 ****
+--- 1,37 ----
+  ;; for non-allegro CL systems.
++ #+clisp (eval-when (compile)
++  (compile-file "uconsalt")
++  (compile-file "mma")
++  (compile-file "parser")
++  (compile-file "stack1")
++  (compile-file "disp1")
++  (compile-file "eval")
++  (compile-file "poly")
++  (compile-file "rat1")
++  (compile-file "simp1")
++  (compile-file "pf")
++  (compile-file "match")
++  (compile-file "diffrat")
++ )
+  #+Allegro (excl::set-case-mode :case-sensitive-lower)
++ #+kcl (defmacro declaim (x) `(proclaim ', x))
++ #+kcl (or (find-package 'excl)
++ #+kcl (make-package 'excl))
+  (load "mma")
+  (use-package :mma)
++ #+(or kcl clisp) (in-package :mma)
++ ; CLISP CaSe SeNsItIvItY: (setf (readtable-case *readtable*) :preserve)
++ ; small problem: all lisp commands should be written uppercase :(
++ ;#+kcl (shadow 'user::set)
++ ;#+kcl (shadow 'user::equal)
++ #+(or kcl clisp) (shadow 'Exp)
++ #+(or kcl clisp) (shadow 'Log)
++ #+(or kcl clisp) (shadow 'Sin)
++ #+(or kcl clisp) (shadow 'Cos)
++ #+(or kcl clisp) (shadow 'Tan)
++ #+(or kcl clisp) (shadow 'Sinh)
++ #+(or kcl clisp) (shadow 'Cosh)
++ #+kcl (import 'user::declaim)
+  (load "uconsalt")
+  (load "parser")
+  (load "stack1")
+*** match.lisp.orig	Sun Feb 20 22:11:41 1994
+--- match.lisp	Mon Feb 21 00:19:15 1994
+***************
+*** 563,570 ****
+  
+  ;;these cause problems if Integer and integer are the same as INTEGER
+  
+! #-(or lucid kcl) (deftype Integer() 'integer)
+! #-(or lucid kcl) (deftype Rational() 'rational)
+  ;;; etc could do single-float, double-float, complex, number, cons, ...
+  
+  ;; extra cases to consider: 
+--- 563,572 ----
+  
+  ;;these cause problems if Integer and integer are the same as INTEGER
+  
+! #-(or lucid kcl clisp) (deftype Integer() 'integer)
+! #+clisp (deftype |Integer|() 'integer)
+! #-(or lucid kcl clisp) (deftype Rational() 'rational)
+! #+clisp (deftype |Rational|() 'rational)
+  ;;; etc could do single-float, double-float, complex, number, cons, ...
+  
+  ;; extra cases to consider: 
+***************
+*** 660,672 ****
+  (defun Less (x y)(cond ((and (numberp x)(numberp y))
+  			  (< x y))
+  			 (t `(Inequality ,x Less ,y))))
+! (defun Equal(x y)(cond 
+  		  ((member x '(Indeterminate Infinity) :test #'eq)
+  		   `(Inequality ,x Equal ,y))
+  		  ((equalp x y)  t) ;; handles numbers too, if equal
+  		  ((and(numberp x)(numberp y)) nil)
+  		  ;; for now, we dump anything we can't prove into Inequality
+  		  (t `(Inequality ,x Equal ,y))))
+  
+  ;; need LessEqual  etc.
+  
+--- 662,684 ----
+  (defun Less (x y)(cond ((and (numberp x)(numberp y))
+  			  (< x y))
+  			 (t `(Inequality ,x Less ,y))))
+! 
+! 
+! #-(or kcl clisp) (defun Equal(x y)(cond 
+  		  ((member x '(Indeterminate Infinity) :test #'eq)
+  		   `(Inequality ,x Equal ,y))
+  		  ((equalp x y)  t) ;; handles numbers too, if equal
+  		  ((and(numberp x)(numberp y)) nil)
+  		  ;; for now, we dump anything we can't prove into Inequality
+  		  (t `(Inequality ,x Equal ,y))))
++ 
++ #+(or kcl clisp) (defun |Equal|(x y)(cond 
++ 		  ((member x '(Indeterminate Infinity) :test #'eq)
++ 		   `(Inequality ,x |Equal| ,y))
++ 		  ((equalp x y)  t) ;; handles numbers too, if equal
++ 		  ((and(numberp x)(numberp y)) nil)
++ 		  ;; for now, we dump anything we can't prove into Inequality
++ 		  (t `(Inequality ,x |Equal| ,y))))
+  
+  ;; need LessEqual  etc.
+  
+*** match16.lisp.orig	Sun Feb 20 22:11:41 1994
+--- match16.lisp	Sun Feb 20 22:18:11 1994
+***************
+*** 667,679 ****
+  (defun Less (x y)(cond ((and (numberp x)(numberp y))
+  			  (tval(< x y)))
+  			 (t `(Inequality ,x Less ,y))))
+! (defun Equal(x y)(cond 
+  		  ((member x '(Indeterminate Infinity) :test #'eq)
+! 		   `(Inequality ,x Equal ,y))
+  		  ((equalp x y)  'True) ;; handles numbers too, if equal
+  		  ((and(numberp x)(numberp y)) nil)
+  		  ;; for now, we dump anything we can't prove into Inequality
+! 		  (t `(Inequality ,x Equal ,y))))
+  
+  ;; need LessEqual  etc.
+  
+--- 667,688 ----
+  (defun Less (x y)(cond ((and (numberp x)(numberp y))
+  			  (tval(< x y)))
+  			 (t `(Inequality ,x Less ,y))))
+! (defun 
+! #-(or kcl clisp) Equal
+! #+(or kcl clisp) |Equal|
+! 	          (x y)(cond 
+  		  ((member x '(Indeterminate Infinity) :test #'eq)
+! 		   `(Inequality ,x
+! #-(or kcl clisp) Equal
+! #+(or kcl clisp) |Equal|
+!                   ,y))
+  		  ((equalp x y)  'True) ;; handles numbers too, if equal
+  		  ((and(numberp x)(numberp y)) nil)
+  		  ;; for now, we dump anything we can't prove into Inequality
+! 		  (t `(Inequality ,x
+! #-(or kcl clisp) Equal
+! #+(or kcl clisp) |Equal|
+!                   ,y))))
+  
+  ;; need LessEqual  etc.
+  
+*** mma.lisp.orig	Sun Feb 20 22:11:41 1994
+--- mma.lisp	Sun Feb 20 21:36:41 1994
+***************
+*** 19,25 ****
+  
+  ;; obsolete (provide 'mma)
+  
+! (defpackage :mma (:nicknames "MockMMA") (:use :common-lisp :excl))
+  (in-package :mma)
+  ;; this next line is not enough.. need to have these macros
+  ;; available at compile time.
+--- 19,26 ----
+  
+  ;; obsolete (provide 'mma)
+  
+! #-(or kcl clisp) (defpackage :mma (:nicknames "MockMMA") (:use :common-lisp :excl))
+! #+clisp (defpackage :mma (:nicknames "MockMMA"))
+  (in-package :mma)
+  ;; this next line is not enough.. need to have these macros
+  ;; available at compile time.
+***************
+*** 30,44 ****
+    ;; etc.  They must be the same in each of the separate packages,
+    ;; and so each package should be in this package ( :mma).
+  	  
+!   '(AddTo Alias And Apply Blank BlankNullSequence BlankSequence 
+  	  CompoundExpression Condition Delayed Derivative DivideBy Dot
+! 	  Equal Exit 
+  	  Factorial Factorial2 Function Greater GreaterEqual If In Increment
+! 	  Inequality Integer Less LessEqual List Map MapAll MessageName
+  	  NonCommutativeMultiply Not Null Optional Or Out Part Pattern
+  	  PatternTest Plus Power PreDecrement PreIncrement Put PutAppend
+  	  Real Repeated RepeatedNull Replace ReplaceAll ReplaceRepeated
+! 	  Rule RuleDelayed SameQ Sequence Set SetDelayed Slot SlotSequence
+  	  SubtractFrom TagSet TagSetDelayed Times TimesBy UnAlias Unequal
+  	  UnSameQ UnSet UpSet UpSetDelayed $Line  Quote)  ;; we added Quote.
+    )
+--- 31,53 ----
+    ;; etc.  They must be the same in each of the separate packages,
+    ;; and so each package should be in this package ( :mma).
+  	  
+!   '(AddTo Alias And Apply Blank BlankNullSequence BlankSequence
+  	  CompoundExpression Condition Delayed Derivative DivideBy Dot
+! #-(or kcl clisp) Equal
+! #+(or kcl clisp) |Equal| 
+! 	  Exit
+  	  Factorial Factorial2 Function Greater GreaterEqual If In Increment
+! 	  Inequality
+! #-clisp Integer
+! #+clisp |Integer|
+! 	  Less LessEqual List Map MapAll MessageName
+  	  NonCommutativeMultiply Not Null Optional Or Out Part Pattern
+  	  PatternTest Plus Power PreDecrement PreIncrement Put PutAppend
+  	  Real Repeated RepeatedNull Replace ReplaceAll ReplaceRepeated
+! 	  Rule RuleDelayed SameQ Sequence 
+! #-(or kcl clisp) Set
+! #+(or kcl clisp) |Set| 
+! 	  SetDelayed Slot SlotSequence
+  	  SubtractFrom TagSet TagSetDelayed Times TimesBy UnAlias Unequal
+  	  UnSameQ UnSet UpSet UpSetDelayed $Line  Quote)  ;; we added Quote.
+    )
+*** parser.lisp.orig	Sun Feb 20 22:11:42 1994
+--- parser.lisp	Sun Feb 27 01:10:50 1994
+***************
+*** 29,35 ****
+  ;; We use lisp atoms to store information on tokens.
+  ;; For production, this could all be put in a Lisp package.
+  
+! (defvar mathrt (copy-readtable nil))
+  (defvar si (make-synonym-stream '*standard-input*))
+  
+  
+--- 29,41 ----
+  ;; We use lisp atoms to store information on tokens.
+  ;; For production, this could all be put in a Lisp package.
+  
+! #-clisp (defvar mathrt (copy-readtable nil))
+! ; too bad clisp hasn't implemented :INVERT readtable.
+! ; This would make CaSe SeNsItIvE life more sane.
+! 
+! ;#+clisp (setf (readtable-case *readtable*) :preserve) ; to be case sensitive
+! #+CLISP (DEFVAR MATHRT (COPY-READTABLE))
+! #+CLISP (SETF (READTABLE-CASE *READTABLE*) :UPCASE) ; standard setting
+  (defvar si (make-synonym-stream '*standard-input*))
+  
+  
+***************
+*** 538,544 ****
+  	))
+  
+  ;;comparison operators
+! (setf (get '== 'compop) 'Equal)
+  (setf (get '!= 'compop) 'Unequal)
+  (setf (get '< 'compop) 'Less)
+  (setf (get '<= 'compop) 'LessEqual)
+--- 544,553 ----
+  	))
+  
+  ;;comparison operators
+! (setf (get '== 'compop)
+! #-(or kcl clisp) 'Equal
+! #+(or kcl clisp) '|Equal|
+! )
+  (setf (get '!= 'compop) 'Unequal)
+  (setf (get '< 'compop) 'Less)
+  (setf (get '<= 'compop) 'LessEqual)
+***************
+*** 763,769 ****
+  	 (cond ((eolp end) temp)
+  	       ((guess-token '=)(rt)
+  		(cond ((guess-token '|.|)(rt)`(UnSet ,temp))
+! 		      (t`(Set ,temp ,(parse-set end)))))
+  	       ((guess-token '|:=|)(rt)`(SetDelayed ,temp ,(parse-set end)))
+  	       ((guess-token '^= ) (rt)`(UpSet ,temp ,(parse-set end)))
+  	       ((guess-token '|^:=| ) (rt)`(UpSetDelayed ,temp ,(parse-set end)))
+--- 772,781 ----
+  	 (cond ((eolp end) temp)
+  	       ((guess-token '=)(rt)
+  		(cond ((guess-token '|.|)(rt)`(UnSet ,temp))
+! 		      (t`(
+! #-(or kcl clisp) Set
+! #+(or kcl clisp) |Set|
+! 		 ,temp ,(parse-set end)))))
+  	       ((guess-token '|:=|)(rt)`(SetDelayed ,temp ,(parse-set end)))
+  	       ((guess-token '^= ) (rt)`(UpSet ,temp ,(parse-set end)))
+  	       ((guess-token '|^:=| ) (rt)`(UpSetDelayed ,temp ,(parse-set end)))
+*** pf.lisp.orig	Sun Feb 20 22:11:42 1994
+--- pf.lisp	Sun Feb 20 21:52:18 1994
+***************
+*** 158,164 ****
+  ;;  Set the precedences of the operators.  This list is arranged in order of
+  ;;  increasing precedence.  
+  
+! (setf (get 'Set `stringprec) 120)
+  (setf (get 'Rule 'stringprec) 130)
+  (setf (get 'Plus 'stringprec) 140)
+  (setf (get 'Times 'stringprec) 150)
+--- 158,165 ----
+  ;;  Set the precedences of the operators.  This list is arranged in order of
+  ;;  increasing precedence.  
+  
+! #-(or kcl clisp) (setf (get 'Set `stringprec) 120)
+! #+(or kcl clisp) (setf (get '|Set| 'stringprec) 120)
+  (setf (get 'Rule 'stringprec) 130)
+  (setf (get 'Plus 'stringprec) 140)
+  (setf (get 'Times 'stringprec) 150)
+***************
+*** 178,184 ****
+  (setf (get 'List 'formatter) 'listformatter)
+  (setf (get 'Dot 'formatter) 'dotformatter)
+  (setf (get 'Real 'formatter) 'realformatter)
+! (setf (get 'Set 'formatter) 'setformatter)
+                  
+  
+  ;;  Get precedence:  
+--- 179,186 ----
+  (setf (get 'List 'formatter) 'listformatter)
+  (setf (get 'Dot 'formatter) 'dotformatter)
+  (setf (get 'Real 'formatter) 'realformatter)
+! #-(or kcl clisp) (setf (get 'Set 'formatter) 'setformatter)
+! #+(or kcl clisp) (setf (get '|Set| 'formatter) 'setformatter)
+                  
+  
+  ;;  Get precedence:  
+***************
+*** 845,852 ****
+  
+  ;; handle the output of "Set" forms
+  
+! (setf (get 'Set 'stringsym) " = ")
+! (setf (get 'Set 'stringsymlen) 3)
+  
+  ;; based on dotformatter
+  
+--- 847,856 ----
+  
+  ;; handle the output of "Set" forms
+  
+! #-(or kcl clisp) (setf (get 'Set 'stringsym) " = ")
+! #+(or kcl clisp) (setf (get '|Set| 'stringsym) " = ")
+! #-(or kcl clisp) (setf (get 'Set 'stringsymlen) 3)
+! #+(or kcl clisp) (setf (get '|Set| 'stringsymlen) 3)
+  
+  ;; based on dotformatter
+  
+***************
+*** 862,876 ****
+      (do ((args (cdr x) (cdr args)))
+  	((null args)
+  	 (MakeHForm (- width 3)
+! 		    (+ maxtoph maxbotmh) hoffset voffset 'Set
+! 		    (prec 'Set) 'none
+  		    (cdr (nreverse ls))))
+  	(setq ret_format (BuildFormat (car args)))
+  	(cond ((atom ret_format)
+  	       (incf width (+ (atomwidth ret_format) 3))
+  	       (setq ls `( ,ret_format " = ",@ls)))
+  	      (t
+! 	       (if (lessprec ret_format 'Set)
+  		   (setq ret_format (parenformatter ret_format)))
+  	       (setq heightpacket (TopBotHs ret_format maxtoph maxbotmh))
+  	       (setq maxtoph (car heightpacket))
+--- 866,887 ----
+      (do ((args (cdr x) (cdr args)))
+  	((null args)
+  	 (MakeHForm (- width 3)
+! 		    (+ maxtoph maxbotmh) hoffset voffset 
+! #-(or kcl clisp) 'Set
+! #+(or kcl clisp) '|Set|
+! #-(or kcl clisp) (prec 'Set)
+! #+(or kcl clisp) (prec '|Set|)
+! 		    'none
+  		    (cdr (nreverse ls))))
+  	(setq ret_format (BuildFormat (car args)))
+  	(cond ((atom ret_format)
+  	       (incf width (+ (atomwidth ret_format) 3))
+  	       (setq ls `( ,ret_format " = ",@ls)))
+  	      (t
+! 	       (if (lessprec ret_format
+! #-(or kcl clisp) 'Set
+! #+(or kcl clisp) '|Set|
+!                )
+  		   (setq ret_format (parenformatter ret_format)))
+  	       (setq heightpacket (TopBotHs ret_format maxtoph maxbotmh))
+  	       (setq maxtoph (car heightpacket))
+*** poly.lisp.orig	Sun Feb 20 22:11:42 1994
+--- poly.lisp	Fri Feb 25 10:05:22 1994
+***************
+*** 406,414 ****
+  	(do ((k l m)
+  	     (m))
+  	    (nil)
+! 	  #-kcl(delete-if #' identity temp :start (+ 2 k))
+  	  ;; fix bug in kcl delete-if, which is non-destructive
+! 	  #+kcl (setq temp (delete-if #' identity temp :start (+ 2 k)))
+  	    (setf (lc temp) (lc p))
+  	    (setq p (pnorm (p+ (p* p slc) (p*cv -1 (p* temp s)))))
+  	    (cond ((or (coefp p)		
+--- 406,414 ----
+  	(do ((k l m)
+  	     (m))
+  	    (nil)
+! 	  #-(or kcl clisp) (delete-if #' identity temp :start (+ 2 k))
+  	  ;; fix bug in kcl delete-if, which is non-destructive
+! 	  #+(or kcl clisp) (setq temp (delete-if #' identity temp :start (+ 2 k)))
+  	    (setf (lc temp) (lc p))
+  	    (setq p (pnorm (p+ (p* p slc) (p*cv -1 (p* temp s)))))
+  	    (cond ((or (coefp p)		
+***************
+*** 434,442 ****
+  	((var> (mainvar u) (mainvar v)) (pcontentxsr u v))
+  	(t (pgcd2sr u v))))
+  
+! ;; pgcd2sr: return the gcd of u and v, which have the same main variable
+! ;; p and q must have the same main variable.
+! 
+  (defun pgcd2sr (p q)
+    ;; set up so q is of same or lower degree
+    (cond ((> (length q) (length p)) (rotatef p q)))
+--- 434,442 ----
+  	((var> (mainvar u) (mainvar v)) (pcontentxsr u v))
+  	(t (pgcd2sr u v))))
+  
+! ;; pgcd2sr: return the gcd of p and q, which have the same main variable
+! ;; there is a bug it it at the moment.   9/18/92.   RJF
+! #+ignore
+  (defun pgcd2sr (p q)
+    ;; set up so q is of same or lower degree
+    (cond ((> (length q) (length p)) (rotatef p q)))
+***************
+*** 461,466 ****
+--- 461,467 ----
+  	    ;;return the gcd of the contents.
+  	    (return content)))))
+  
++ (defun pgcd2sr (p q)(pgcd2prim p q))
+  
+  ;; this is a primitive prs, just like pgcd2sr but not as fast sometimes
+  (defun pgcd2prim (u v)
+***************
+*** 564,567 ****
+--- 565,569 ----
+  		      ((= i 0) (pnorm r))
+  		      (setf (svref r i)(pd1 (svref r i))))))))
+     (pd1 p)))
++ 
+  
+*** stack1.lisp.orig	Sun Feb 20 22:11:42 1994
+--- stack1.lisp	Mon Feb 21 00:15:37 1994
+***************
+*** 19,26 ****
+    ;; a pair that looks like  <name of function> <next lower frameptr>
+    ;; -1 <= frameptr < ptr
+    (frameptr -1 :type fixnum) 
+!   (vars (make-array size))
+!   (vals (make-array size)))
+  
+  (defun spush(s var val)
+    (setf (aref (stack-vars s) (stack-ptr s)) var)
+--- 19,29 ----
+    ;; a pair that looks like  <name of function> <next lower frameptr>
+    ;; -1 <= frameptr < ptr
+    (frameptr -1 :type fixnum) 
+! #-clisp (vars (make-array size))
+! #+clisp (vars (make-array 100))
+! #-clisp (vals (make-array size))
+! #+clisp (vals (make-array 100))
+! )
+  
+  (defun spush(s var val)
+    (setf (aref (stack-vars s) (stack-ptr s)) var)

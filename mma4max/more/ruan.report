@@ -1,0 +1,223 @@
+Summer 1992
+Work by Cindy Ruan
+(report edited by RJF)
+
+Simple plotting
+
+1. We wrote a common-lisp plotting procedure, using xgraph for output,
+that takes a lisp function of one variable and produces a plot. Most
+of the options that are available to the direct user of xgraph are
+also available to the lisp user.  In order to avoid the phenomenon of
+``beats'' that can make the plot of a periodic function look like it
+has a different period (or is a constant), the sample points are
+``jiggled'' a little. Several functions may be plotted on the same
+graph.
+
+2. We wrote a lisp plotting procedure to plot one or more
+parametric functions of x and y as t varies, similar to the above.
+
+[limits: no adaptation of sample density, no treatment of outlying
+points]
+
+Interval plot:
+
+1. We wrote a lisp plotting procedure, using xgraph for output, that
+takes a lisp function of one variable and produces an interval-based
+plot, as described in [fateman:honest plotting]. The lisp function
+being plotted must be evaluable in interval arithmetic.
+
+So far, only these operations are included in the interval arithmetic:
++ - * / sin cos tan cot csc sec abs exp log.
+
+2. Those y values that are too far away from the majority of the
+points are removed from the plot by default.  The way we decide is to
+first remove the points that are outside three standard deviations
+from the median. We next recalculate sigma = standard deviation of the
+remaining points.  Only those points that are between [median - 3
+sigma, median + 3 sigma] are displayed.   This technique is an
+attempt to preserve the appearance of the curve in the presence of
+extreme variations like those present in a plot of tan(x).)
+
+(This technique should also be added in the normal plotting program.)
+
+3. If the left and right edges of the plot are too close together
+for the scales to be useful, a rescaling is computed.  For
+example, plotting between x=1.00001 and x=1.00002 is going to have
+x-axis ticks all labelled 1.00.
+The plot is rescaled to f(x + min) from 0 to (max - min).
+Rescaling is done if max and min are
+   too close: say abs(max / (max - min)) > 100.
+
+
+Other activities
+``Combinatorica'' and Graph Theory:
+
+1. Only the primitive functions involving permutations
+have been programmed in lisp, as a first step in implementing
+Skiena's Combinatorica programs (in Mathematica) directly in Lisp.
+
+   See the file comb.lisp for details.
+
+.............
+
+Suggestions for further development of plotting
+
+2D Plotting of Function(s) of One Variable:
+
+We should apply some adaptive plotting techniques such as divided differences,
+rescaling the x-axis when the interval of x to plot is too small, and etc. to
+make the plot more accurate.  We also need to take more care about errors,
+floating-point infinities etc. in plotting of simple functions. 
+(The interval package takes some of this into account).
+
+
+Interval Plot:
+
+We should add more mathematics functions to the set that can be evaluated
+in interval computation: square-root, general power, special cases for
+polynomials.
+
+We should try to shade the boxes displayed and do something to
+distinquish between the finite y-intervals and the infinite ones.
+Currently, only the border of the boxes are drawn.  Since we might
+sometimes limit the y range to be displayed, some of the boxes might
+only be shown partially.  This makes it difficult to distinquish from
+the infinity intervals.  Look at (intplot (/ 1 x) (x -5 5)) for
+example.
+
+We should pass more options through to customize the display as we
+have done in the normal plotting program.
+A parametric intplot could be written as well.
+
+
+Combinatorics and Graph Theory:
+
+Much of ``Combinatorica'' is compelling visually because of the
+graphical components programmed in the book.  It should be possible to
+devise a data-representation of graphs so that xgraph (or some other
+plotting programs) can duplicate the kinds of displays made by Skiena.
+
+.........
+Comments on xgraph:
+
+Xgraph has been quite useful in providing a simple framework for
+plotting output.  It is not quite as flexible as we would like in at
+least the following ways: the axis tick-mark labeling is not always as
+pleasing as it might be; there seems to be no option for displaying
+filled polygons (as would be useful for interval plots).  Since the
+lisp plotting facilities work by producing a file which is then read
+by xgraph, there is a certain overhead in writing computed numbers as
+ascii and then reading them in.  Various other techniques would be
+much faster, including direct memory access.  Speed does not seem to
+be an important limitation for 2-D graphs however.
+
+Xgraph does not help for 3-D surface plotting, a logical extension to
+this work.  We have not found an equivalently easy to use high-quality
+public-domain X-window and Postscript program for 3D plotting,
+although there may be some contenders now (Zicvis?).
+
+.................
+
+			   PLOTTING UTILITIES
+
+
+To use plot or parametric_plot, load the file plot.lisp into the lisp system.
+
+To use intplot, load the file intmath.lisp.
+
+The followings explains the usage for each of the above functions.
+---------------------------------------------------------------------------
+
+plot - plots function(s) of one variable
+
+USAGE
+(plot f (var min max) {options}*)     
+			plots f as a function of var from min to max
+
+(plot (list f1 f2 f3 ...) (var min max) {options}*)
+                        plots more than one functions together
+
+
+Use keywords options to customize the display.  They are:
+:points <N>       plot at least N points. (default 100)
+
+:title <String>   display a title on the top of the plot.  The argument String
+                  must be quoted with double quotes.
+
+:xlabel <String>  label of the x axis. (default "X")
+
+:ylabel <String>  label of the y axis. (default "Y")
+
+:boundbox <Bool>  draws a bounding box around the data region if Bool evaluates
+                  to true. (default false)
+
+:markers <Bool>   marks each data point with a large dot. (default false)
+
+:ticks <Bool>     draws tick marks rather than full grid lines. (defualt false)
+
+:ymax <N>         limits the maximum y value to be displayed to be N.
+
+:ymin <N>         limits the minimum y value to be displayed to be N.
+
+:logx <Bool>      specifies a logarithmic x axis. (default false)
+
+:logy <Bool>      specifies a logarithmic y axis. (default false)
+
+
+EXAMPLES
+
+(plot (sin x) (x 0 pi))    plots (sin x) as x ranges from 0 to pi.
+
+(plot (list (sin x) (cos x)) (x -3 3))     plots (sin x) (cos x) from -3 to 3.
+
+(plot (expt s 2) (s -10 10) :points 200
+			    :title "s^2"
+                            :ticks t)      plots (expt s 2) from -10 to 10 
+					   with title "s^2" and tick marks.
+
+----------------------------------------------------------------------------
+
+parametric_plot - plot parametric function(s)
+
+USAGE
+(parametric_plot (list fx fy) (t tmin tmax) {options}*)
+			to make one parametric plot
+
+(parametric_plot (list (list fx fy) (list gx gy) ...)
+	         (t tmin tmax) {options}*)
+			to plot more than one curves together
+
+where fx and fy are functions of t and tmin and tmax are numbers such that
+tmin < tmax.
+ 
+The keyword options are the same as in the plot program.
+
+
+EXAMPLE
+
+(parametric_plot (list (sin u) (cos u)) (u 0 (* 2 pi)))
+
+(parametric_plot (list (list (sin u) (cos u))
+	               (list (+ u 3) (* u 7)))
+		 (u -5 10) :points 30)
+
+------------------------------------------------------------------------
+
+intplot - interval plot of a function of one variable
+
+USAGE 
+(intplot f (var min max) {options}*)
+
+
+EXAMPLES
+
+(intplot (sin x) (x -3.14 3.14))   plots (sin x) as x ranges from -3.14 to 3.14
+
+
+options for intplot can be similar to the list of options for plot, but
+are not yet implemented.
+
+
+
+
+

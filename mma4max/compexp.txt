@@ -1,0 +1,31 @@
+(* complex sorta expressions in mma *)
+ce={r+s I,
+ r+t+s I + u I,
+r+ 3 I,
+3 + s I,
+r+3+4 I,
+3+4 I
+4 I,
+3,
+r,
+s I,
+0,
+I,
+3*Exp[4 I],
+r*Exp[I],
+r+(s+3)I};
+
+(*pattern things*)
+pe={r1= I-> aha,
+ r2= 4 I -> aha,
+ r3= 3+4 I -> aha,
+ r4= a_+b_ I -> aha[a,b],
+ r5= a_.+b_ I -> aha[a,b],
+ r6= a_+b_. I -> aha[a,b],
+ r7= a_.+b_. I -> aha[a,b],
+ r8= a__+b__ I -> aha[a,b],
+ r9= Complex[a_,b_] -> aha[a,b],
+ r10= Complex[0,1] -> aha,
+ r11= Complex[0,b_]-> aha[0,b],
+ r4= a_.Exp[b_. I] -> ahaexp[a,b]}
+

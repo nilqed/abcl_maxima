@@ -1,0 +1,48 @@
+/// I started this up in an emacs shell window in windows XP ///
+
+c:\lisp\mma4max>"C:\Program Files\Maxima-5.23.2\bin\maxima.bat"
+"C:\Program Files\Maxima-5.23.2\bin\maxima.bat"
+Maxima 5.23.2 http://maxima.sourceforge.net
+using Lisp GNU Common Lisp (GCL) GCL 2.6.8 (a.k.a. GCL)
+Distributed under the GNU Public License. See the file COPYING.
+Dedicated to the memory of William Schelter.
+The function bug_report() provides bug reporting information.
+(%i1) to_lisp()
+;
+
+Type (to-maxima) to restart, ($quit) to quit Maxima.
+
+MAXIMA> (sys:chdir "c:/lisp/mma4max")
+"c:/lisp/mma4max"
+MAXIMA> (load "init.lisp")
+T
+MAXIMA> (compile-mma)
+
+;;;;;  A bunch of messages from the compiler.  If all goes well, it
+;;;;;  terminates this way:
+NIL
+MAXIMA> (load-mma)
+
+#<"MMA" package>
+MMA> (tl)
+Mock-Mma (for GCL-Maxima) 3.0 (February 6, 2011) [With pre-loaded data]
+  Possibly Copyright 1990-2011 U.C.Berkeley
+   -- Terminal graphics initialized -- 
+
+In[1] := 
+
+
+NOW YOU CAN TYPE MockMma commands into this program.
+sample inputs are in hey.batch, but they are intended to exercise
+only the matching program.  Lots of other stuff will work, but
+don't be surprised if something from Mathematica DOESN'T work.  
+
+Try Rat[(x+1)^22+1]   
+to see rational simplification, also 2-d display.
+
+
+An old paper discussing the initial implementation of the parser
+is in http://www.cs.berkeley.edu/~fateman/papers/lmath.pdf
+
+There is a huge amount of description in the source-code comments.
+

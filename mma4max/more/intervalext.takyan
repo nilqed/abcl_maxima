@@ -1,0 +1,1112 @@
+From takyan@peoplesparc.Berkeley.EDU Fri Jun  7 11:43:41 1991
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA14816; Fri, 7 Jun 91 11:43:40 PDT
+Received: by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA09212; Fri, 7 Jun 91 11:45:53 PDT
+Date: Fri, 7 Jun 91 11:45:53 PDT
+From: takyan@peoplesparc.Berkeley.EDU (Tak Yan)
+Message-Id: <9106071845.AA09212@peoplesparc.Berkeley.EDU>
+To: fateman@peoplesparc.Berkeley.EDU
+Subject: interval
+Status: R
+
+ 
+Hi, Prof:
+
+I have finished commenting the interval program and
+documenting it.
+
+Would you like to look at them and give me comments?
+Thanks
+
+Tak
+
+From takyan@peoplesparc.Berkeley.EDU Fri Jun  7 11:43:48 1991
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA14821; Fri, 7 Jun 91 11:43:46 PDT
+Received: by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA09216; Fri, 7 Jun 91 11:46:02 PDT
+Date: Fri, 7 Jun 91 11:46:02 PDT
+From: takyan@peoplesparc.Berkeley.EDU (Tak Yan)
+Message-Id: <9106071846.AA09216@peoplesparc.Berkeley.EDU>
+To: fateman@peoplesparc.Berkeley.EDU
+Status: R
+
+;; -*- Mode:Common-Lisp;Package:user; Base:10 -*-
+
+;;; Interval Package with Affine Rational Endpoints
+;;; (c) copyright 1991, Richard J. Fateman
+
+(defclass arint ()  ;affine rational intervals
+  ((left-value :initarg :left :reader left-value :initform 0)
+   (right-value :initarg :right :reader right-value :initform 0)))
+
+(defun left (x)
+  (typecase x
+            (arint (left-value x))
+            (t x))) ;; if x is rational, for example
+
+(defun right (x)
+  (typecase x
+            (arint (right-value x))
+            (t x)))
+
+(defmethod print-object ((x arint) s)
+  (format s "[~s ~s]" (left x) (right x)))
+
+
+
+;; some special intervals
+
+(defvar omega-arint 
+  (make-instance 'arint :left minf-rat :right inf-rat))
+
+(defvar zero-arint 
+  (make-instance 'arint :left 0 :right 0))
+
+(defvar nan-arint 
+  (make-instance 'arint :left nan-rat :right nan-rat))
+
+(defvar empty-arint 
+  (make-instance 'arint :left inf-rat :right minf-rat))
+
+
+
+(defun make-arint (l r) 
+  (make-instance 'arint :left l :right r))
+
+(defmethod plus (x y)
+  (plus-arint x y))
+
+(defmethod minus (x y)
+  (minus-arint x y))
+
+(defmethod times (x y)
+  (times-arint x y))
+
+(defmethod divides (x y)
+  (divides-arint x y))
+
+(defmethod negate (x)
+  (negate-arint x))
+
+(defmethod reciprocal (x)
+  (reciprocal-arint x))
+
+
+
+(defun plus-arint (x y)
+  (let* ((lx (left x)) (rx (right x))
+	 (ly (left y)) (ry (right y))
+	 (l (plus lx ly)) (r (plus rx ry)))
+    (cond ((or (eq nan-rat l) (eq nan-rat r))
+	   nan-arint)                         ;; [NaN]
+	  ((greaterp lx rx)
+	   (cond ((greaterp ly ry)            ;; x and y both exterior
+		  omega-arint)
+		 (t                           ;; x exterior, y interior
+		  (cond ((greaterp l r)
+                         (make-arint l r))
+                        (t omega-arint)))))
+	  (t 
+	   (cond ((greaterp ly ry)            ;; x interior, y exterior
+		  (cond ((greaterp l r)
+                         (make-arint l r))
+                        (t omega-arint)))
+		 (t                           ;; both interior 
+		  (make-arint l r)))))))
+
+
+
+(defun minus-arint (x y) 
+  (plus-arint x (negate-arint y)))
+
+
+
+;; attach a code to the interval x, which characterizes the interval
+
+(defun nan-inf-zero-check (x)
+  (let* ((l (left x)) (r (right x)) 
+	 (ld (denom l)) (ln (numer l))
+	 (rd (denom r)) (rn (numer r)))
+    (cond ((= ld 0) 
+	   (cond ((= ln 0) 0)                ;; 0 -- [NaN]
+		 ((= rd 0)
+		  (cond ((= rn 0) 0)         ;; 0 -- [NaN]
+			((> ln rn) 1)        ;; 1 -- [1/0, -1/0]
+			((< ln rn) 3)        ;; 3 -- [-1/0, 1/0]
+			((= ln 1) 5)         ;; 5 -- [1/0, 1/0]
+			(t 6)))              ;; 6 -- [-1/0, -1/0]
+		 (t 7)))                     ;; 7 -- [1/0, a] or [-1/0, a]
+	  ((= rd 0)
+	   (cond ((= rn 0) 0)                ;; 0 -- [NaN]
+		 (t 8)))                     ;; 8 -- [a, 1/0] or [a, -1/0]
+	  ((and (erat= 0 l) (erat= 0 r)) 2)  ;; 2 -- [0, 0]
+	  ((<= l r) 9)                       ;; 9 -- [a, b] 
+	  (t 4))))                           ;; 4 -- [b, a]
+
+
+
+;;             0     1     2     3     4     5     6     7     8     9
+;;
+;;           [NaN] empty [0,0] omega [b,a] [i]   [-i]  [-i,a][a,i] [a,b]
+;;          +-----------------------------------------------------------+
+;; 0  [NaN] |[NaN]                                                      |
+;;          |     +-----------------------------------------------------+
+;; 1  empty |     |empty                                                |
+;;          |     |     +-----------------------------------------------+
+;; 2  [0,0] |     |     |[0,0]                                          |
+;;          |     |     |     +-----------------------------------------+
+;; 3  omega |     |     |     |omega                                    |
+;;          |     |     |     |     +-----------------------------------+
+;; 4  [b,a] |     |     |     |     | f0  | f1  | f2  | f3  | f4  | f5  |
+;;          |     |     |     |     +-----------------------------------+
+;; 5  [i]   |     |     |     |     | f1  |                             |
+;;          |     |     |     |     +-----+                             |
+;; 6  [-i]  |     |     |     |     | f2  |                             |
+;;          |     |     |     |     +-----+                             |
+;; 7  [-i,a]|     |     |     |     | f3  |           minmax            |
+;;          |     |     |     |     +-----+                             |
+;; 8  [a,i] |     |     |     |     | f4  |                             |
+;;          |     |     |     |     +-----+                             |
+;; 9  [a,b] |     |     |     |     | f5  |                             |
+;;          +-----+-----+-----+-----+-----+-----------------------------+
+
+
+
+(defun times-arint (p q)
+  (let ((pc (nan-inf-zero-check p))
+	(qc (nan-inf-zero-check q)))
+    (cond ((and (> pc 4) (> qc 4)) (minmax p q pc qc))
+	  ((or (= pc 0) (= qc 0)) nan-arint)
+	  ((or (= pc 1) (= qc 1)) empty-arint)
+	  ((= pc 2) (if (or (= qc 3) (= qc 5) (= qc 6))
+			nan-arint zero-arint))
+	  ((= qc 2) (if (or (= pc 3) (= pc 5) (= pc 6))
+			nan-arint zero-arint))
+	  ((or (= pc 3) (= qc 3)) omega-arint)
+	  ((= qc 4) (ext-times q p pc))
+	  (t (ext-times p q qc)))))
+
+
+
+;; given the intervals p and q and their associated codes (which should
+;; be greater than 4), determine the product
+
+(defun minmax (p q pc qc)
+  (let ((a1 (left p)) (b1 (right p))
+	(a2 (left q)) (b2 (right q)))
+    (cond ((and (= pc 7) (eq a1 inf-rat)) (setq a1 minf-rat))
+	  ((and (= pc 8) (eq b1 minf-rat)) (setq b1 inf-rat)))
+    (cond ((and (= qc 7) (eq a2 inf-rat)) (setq a2 minf-rat))
+	  ((and (= qc 8) (eq b2 minf-rat)) (setq b2 inf-rat)))
+    (let* ((a1a2 (times a1 a2)) (a1b2 (times a1 b2))
+	   (b1a2 (times b1 a2)) (b1b2 (times b1 b2))
+	   (mi (minimum a1a2 a1b2 b1a2 b1b2))
+	   (ma (maximum a1a2 a1b2 b1a2 b1b2)))
+      (make-arint mi ma))))
+    
+
+
+(defvar funlist (list 'f0 'f1 'f2 'f3 'f4 'f5))
+
+(defun ext-times (p q qc)
+  (apply (nth (- qc 4) funlist) (list p q)))
+
+
+
+;; the following functions determine the product p * q, knowing
+;; that p is an exterior interval [b, a] where b and a are both
+;; not tricky rationals
+
+
+
+;; [b2, a2] * [b1, a1]
+
+(defun f0 (p q)
+  (let ((b2 (left p)) (a2 (right p))
+        (b1 (left q)) (a1 (right q)))
+    (cond ((or (lessp 0 a1) (lessp 0 a2) (lessp b1 0) (lessp b2 0))
+           omega-arint)
+          (t (let ((mi (minimum (times b1 b2) (times a1 a2)))
+                   (ma (maximum (times a1 b2) (times b1 a2))))
+               (if (or (lessp mi ma) (erat= mi ma))
+                   omega-arint (make-arint mi ma)))))))
+
+;; [b2, a2] * [1/0, 1/0]
+
+(defun f1 (p q)
+  (let ((b2 (left p)) (a2 (right p)))
+    (cond ((or (lessp b2 0) (lessp 0 a2)) omega-arint)
+          ((erat= 0 b2) (make-arint 0 inf-rat))
+	  ((erat= 0 a2) (make-arint minf-rat 0))
+          (t empty-arint))))
+
+;; [b2, a2] * [-1/0, -1/0]
+
+(defun f2 (p q)
+  (let ((b2 (left p)) (a2 (right p)))
+    (cond ((or (lessp b2 0) (lessp 0 a2)) omega-arint)
+	  ((erat= 0 a2) (make-arint 0 inf-rat))
+	  ((erat= 0 b2) (make-arint minf-rat 0))
+	  (t empty-arint))))
+
+;; [b2, a2] * [-1/0, a1]
+
+(defun f3 (p q)
+  (let ((b2 (left p)) (a2 (right p)) (a1 (right q)))
+    (cond ((or (lessp 0 a1) (lessp 0 a2) (lessp b2 0))
+           omega-arint)
+          (t (let ((r (times a1 b2)) (l (times a1 a2)))
+               (if (or (greaterp r l) (erat= r l))
+                   omega-arint (make-arint l r)))))))
+
+;; [b2, a2] * [a1, 1/0]
+
+(defun f4 (p q)
+  (let ((b2 (left p)) (a2 (right p)) (a1 (left q)))
+    (cond ((or (lessp a1 0) (lessp 0 a2) (lessp b2 0))
+           omega-arint)
+          (t (let ((l (times a1 b2)) (r (times a1 a2)))
+               (if (or (greaterp r l) (erat= r l))
+                   omega-arint (make-arint l r)))))))
+
+;; [b2, a2] * [a1, b1]
+
+(defun f5 (p q)
+  (let ((b2 (left p)) (a2 (right p))
+        (a1 (left q)) (b1 (right q)))
+    (cond ((or (lessp 0 a1) (erat= 0 a1))
+           (let ((mi (minimum (times a1 b2) (times b1 b2)))
+                 (ma (maximum (times a1 a2) (times b1 a2))))
+             (if (or (greaterp ma mi) (erat= ma mi))
+                 omega-arint (make-arint mi ma))))
+          ((or (lessp b1 0) (erat= 0 b1))
+           (let ((mi (minimum (times a1 a2) (times b1 a2)))
+                 (ma (maximum (times a1 b2) (times b1 b2))))
+             (if (or (greaterp ma mi) (erat= ma mi))
+                 omega-arint (make-arint mi ma))))
+          (t omega-arint))))
+
+
+
+(defun minimum (&rest l)
+  (cond ((null l) nil)
+	((null (cdr l)) (car l))
+	(t (minimum2 (car l) (apply #'minimum (cdr l))))))
+
+(defun minimum2 (x y)
+  (cond ((eq nan-rat x) y)
+	((eq nan-rat y) x)
+	((lessp x y) x)
+	((erat= x y) (if (eql x 0) y x))      ; min(0, -0) = -0
+	(t y)))
+
+(defun maximum (&rest l)
+  (cond ((null l) nil)
+	((null (cdr l)) (car l))
+	(t (maximum2 (car l) (apply #'maximum (cdr l))))))
+
+(defun maximum2 (x y)
+  (cond ((eq nan-rat x) y)
+	((eq nan-rat y) x)
+	((greaterp x y) x)
+	((erat= x y) (if (eql x 0) x y))      ; and max(0, -0) = 0
+	(t y)))
+
+
+
+
+(defun divides-arint (r s)
+  (times-arint r (reciprocal-arint s)))
+
+
+
+(defun negate-arint (x)
+  (make-arint (negate (right x)) (negate (left x))))
+
+
+
+(defun reciprocal-arint (x)
+  (make-arint (reciprocal (right x)) (reciprocal (left x))))
+
+
+
+From takyan@peoplesparc.Berkeley.EDU Fri Jun  7 11:44:01 1991
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA14825; Fri, 7 Jun 91 11:43:59 PDT
+Received: by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA09220; Fri, 7 Jun 91 11:46:15 PDT
+Date: Fri, 7 Jun 91 11:46:15 PDT
+From: takyan@peoplesparc.Berkeley.EDU (Tak Yan)
+Message-Id: <9106071846.AA09220@peoplesparc.Berkeley.EDU>
+To: fateman@peoplesparc.Berkeley.EDU
+Status: R
+
+;; -*- Mode:Common-Lisp;Package:user; Base:10 -*-
+
+;;; Common Lisp AFFINE rational number package based on IEEE 754 standard
+;;; for binary floating point arithmetic.
+;;; (c) copyright 1991, Richard J. Fateman
+;;; Part of our intention here is to show how little
+;;; a change would be needed to replace the CL rationals by this.
+
+
+;;; This package includes operations and representations for rationals and
+;;;  Infinities (=1/0, -1/0)
+;;;  NotaNumber  (0/0)
+;;;  signed zeros  0, -0  (= 0/-1)
+
+;;; The option of trapping on divide by zero or invalid is provided.
+
+;;; This "signed zero"  means that the denominator of an erat might be
+;;; negative, but then the denominator is in fact -1 and
+;;; the numerator is 0. 
+
+;; version 4.0 ACL lisp should have "CLOS" built in, making this unnecessary.
+
+;; The user shouldn't use these two global variables
+;; except via programs rat-dbyz-catch or rat-invalid-catch
+;; or similar programs. So we made their names long.
+
+(defvar *rat-dbyz-trap-enable* nil)
+(defvar *rat-invalid-trap-enable* nil)
+
+;; These two global variables can be queried by the user to
+;; see if an un-trapped NaN was produced in a sequence of
+;; operations.
+
+(defvar *rat-dbyz-flag* nil)
+(defvar *rat-invalid-flag* nil)
+
+;; define a class holding the extended rationals
+;; and how to print them.  
+
+(defclass erat() 
+ ((numerator :initarg :numerator :reader num :initform 0)
+  (denominator :initarg :denominator :reader den :initform 0)))
+
+(defvar nan-rat (make-instance 'erat :numerator 0 :denominator 0))
+(defvar inf-rat (make-instance 'erat :numerator 1 :denominator 0))
+(defvar minf-rat (make-instance 'erat :numerator -1 :denominator 0))
+(defvar mzero-rat (make-instance 'erat :numerator 0 :denominator -1))
+
+(defmethod print-object ((x erat) s)
+ (if (eql (den x) 1) (format s "~s" (num x)) ;; an integer  n/1
+  (format s "~s./~s" (num x)(den x))))  ;; use ./ instead of / in printing
+
+;; create-erat is the top-level function to use to make a new erat.
+;; it assumes nothing much about the inputs x and y except that they
+;; are either CL real numbers or possibly erats. If the 2nd arg is missing,
+;; it is taken to be 1.
+
+(defmethod absol ((x erat))
+  (let ((n (numer x))
+	(d (denom x)))
+    (cond ((< d 0) 0)
+	  ((< n 0) (create-erat-simple (- n) d))
+	  ((and (= n 0) (= d 0)) nan-rat)
+	  (t x))))
+
+(defmethod absol ((x number))
+  (abs x))
+
+(defmethod negate (x)
+  (cond ((< (denom x) 0) 0)
+	(t (create-erat-simple (- (numer x)) (denom x)))))
+
+(deftype realnum()'(and number (not complex)))
+
+(defun create-erat(x &optional(y 1));;create x/y as erat, or ratio
+  (cond((eql y 0)(create-erat-simple x y))
+       ((typep x 'erat)(quotient x (create-erat y)))
+       ((typep y 'erat)(quotient (create-erat x) y))
+       ((or (not (typep x 'realnum))(not (typep y 'realnum)))
+	(error "~s/~s cannot be converted to erat"  x y))
+       ;; we could actually return a CL rational or integer by just
+       ;; saying (rationalize (/ x y)) here..
+       ;; we should (but don't) check for float-nans etc.
+       ;; rationalize will give an error for inf or nan stuff.
+       ;; if we had a portable way of checking for this, we could
+       ;; do the coercion.
+       (t(let ((h (rationalize (/ x y))))  ;; handles normal floats etc
+	   (create-erat-simple (numerator h)(denominator h))))))
+
+
+;; this function should be used whenever possible internally
+;; to avoid another gcd computation.
+
+#+ignore  ; see redefinition below
+(defun create-erat-simple (x y) 
+;; this assumes  integers x and y, where x/y is in lowest terms etc.
+  (case y
+	(0 (cond ((eql x 0) nan-rat)
+		 ((> x 0) inf-rat)
+		 ((< x 0) minf-rat)))
+	   
+	(1 x) ;just return the integer x
+	(t (make-instance 'erat 
+		   :numerator x
+		   :denominator y))))
+
+;; these accessors make it irrelevant as to whether x is ratio or erat
+
+(defmethod numer ((x rational))(numerator x))
+(defmethod numer ((x erat))(num x))
+
+(defmethod denom ((x rational))(denominator x))
+(defmethod denom ((x erat))(den x))
+
+;; define extended plus
+
+;; here's a backstop for nonsensical arguments
+
+(defmethod plus (a b) `(Plus ,a ,b))
+
+(defmethod plus (x (y erat))
+  (plus y x)); put erat first if anywhere
+
+;; adds both normal integers or ratios. not used for erats...
+(defmethod plus ((x rational)(y rational))(create-erat (+ x y)))
+
+(defmethod plus ((x erat) y)
+ (let* ((a (numer x))(b (denom x))
+	(c (numer y))(d (denom y))  ;a/b + c/d  = r/s
+	(r (+ (* a d) (* b c)))
+	(s (* b d))
+	g)
+   (cond ((eql s 0)
+	  (cond((> r 0) inf-rat)
+	       ((< r 0) minf-rat)
+	       (t
+		;; a*d+b*c = 0. Look at the cases. We know that b*d=0.
+		;; go through the cases
+		(cond
+		 ;; b=0   ==>  a*d=0. 
+		 ;; case 1: a=0  ==> 0/0 + ?? -> 0/0
+		 ((eql a 0) nan-rat)
+		 ;; case 2:  a != 0 ==>  d=0. But then b*c = 0.  
+		 ;; case 3: c=0  ==> ?? + 0/0 -> 0/0
+		 ((eql c 0) nan-rat)
+		 ;; that also takes care of the case d=0.
+		 ;; case 4: b=d=0 ==>  a,c = + or - 1.
+		 ((not (eql a b)) nan-rat) ;; 1/0 + -1/0 -> 0/0
+		 ((> a 0) inf-rat)
+		 (t minf-rat)))))
+	 (t (cond ((< s 0) (setq s (- s)) (setq r (abs r))))
+	    (setq g (gcd r s))  
+	    (create-erat-simple (/ r g) (/ s g))))))
+
+;; define extended times
+
+;; here's a backstop for nonsensical arguments
+
+(defmethod times (a b) `(Times ,a ,b))
+
+(defmethod times (x (y erat))
+  (times y x)); put erat first if anywhere
+
+(defmethod times ((x rational)(y rational))(* x y))
+
+(defmethod times ((x erat) y)
+ (let* ((a (numer x))(b (denom x))
+	(c (numer y))(d (denom y))  ;a/b * c/d  = r/s
+	(r (* a c))
+	(s (* b d))
+	g)
+
+   (cond((eql s 0)(create-erat-simple (signum r) s))
+	(t (setq g (gcd r s))
+	   (create-erat-simple (/ r g) (/ s g))))))
+
+;; quotient
+
+(defun quotient(x y)(times x (reciprocal y)))
+
+;; reciprocal
+
+;; non-trapping versions ...
+;(defmethod reciprocal((x erat)) (create-erat-simple (denom x)(numer x)))
+;(defmethod reciprocal((x rational)) (create-erat-simple (denom x)(numer x)))
+
+;; traps in *rat-dbyz-trap-enable* is non-nil
+
+(defmethod reciprocal((x erat))(recip2 x))
+(defmethod reciprocal((x rational))(recip2 x))
+(defmethod reciprocal(x) `(Power ,x -1))
+
+(defun recip2(x)
+  (cond((and *rat-dbyz-trap-enable* (eql (numer x) 0))
+	(throw 'rat-dbyz 'rat-dbyz))
+       (t (setf *rat-dbyz-flag* t)
+	  (create-erat-simple (denom x)(numer x)))))
+
+#+ignore ;; if we never trapped or looked at the flags, this would do..
+(defun recip2 (x)(create-erat-simple (denom x)(numer x)))
+
+;; comparisons (taking IEEE float rules as gospel)
+
+;;         .. 1/0  >  0/-1      true
+;;        ... 0/1  >  0/-1      false
+;;        ... any  >  0/0       false
+;;        ... 0/0  >  any       false
+
+#+ignore  ;; see redefinition below
+(defun greaterp(x y)
+  (cond((eql (denom x) 0) 
+	(if (eql (denom y) 0) (> (numer x) 0 (numer y))))  ; 1>0> -1 passes
+       ;; do we need to check if (denom y) is zero?
+       ;; no, because if that is the case, (numer y) is one,
+       ;; and the test below is then (> 0 (denom x)).
+       ;; but (denom x) is either 0 or positive, so result is nil
+       (t (> (* (numer x)(denom y))(* (numer y)(denom x))))))
+#+ignore ;; see redefinition below
+(defun lessp (x y)
+  (cond((eql (denom x) 0) 
+	(if (eql (denom y) 0) (< (numer x) 0 (numer y))))  ; -1 <0< 1 passes
+       ;; do we need to check if (denom y) is zero?
+       ;; no, because if that is the case, (numer y) is one,
+       ;; and the test below is then (< 0 (denom x)).
+       ;; but (denom x) is either 0 or positive, so result is nil
+       (t (< (* (numer x)(denom y))(* (numer y)(denom x))))))
+
+;;  1/0 = any     false
+;; -1/0 = any     false
+;;  0/0 = any     false
+
+;;  0/1 = 0/-1    true
+
+
+(defun erat= (x y)
+   (and (not (eql (denom y) 0))  ; checking one denom is enough
+
+	(eql (numer y)(numer x))      ;; if nums are equal then check if
+	(or (eql (denom y)(denom x))  ;; denoms are equal or case of
+	    (eql (- (denom x)) (denom y)) ;; 0/1 = 0/-1
+	)))
+
+;; actually IEEE 754 has 26 functionally distinct comparisons composed
+;; from the setting of 4 relation flags and an exception flag.  We
+;; have provided only 3 of them.
+
+;;         greater    less    equal    unordered   (exception if invalid
+;;          than      than                          or unorder)
+
+;;  >         T          -        -         -           T
+;;  <         -          T        -         -           T
+;;  =         -          -        T         -           -
+
+;; There are some subtleties because not-equal is not the same as
+;; less-than-or-greater-than.  The latter gives an exception for
+;; unordered.
+
+
+;; other items needed include expt
+;; coercion to and from other formats
+;; difference, remainder, zerop plusp minusp notequal etc.
+
+;; for "normal" rationals, these are already defined.
+
+;; we can use nans for results of
+;; (coerce inf-rat 'float) (coerce inf-rat 'single-float)
+;; (coerce inf-rat 'double-float) (coerce inf-rat 'long-float)
+
+;; coercion of nan-rat to a float type produces nans of that type.
+;; in Franz Inc's allegro CL we have the forms
+
+;; #.excl::*nan-double* #.excl::*infinity-double*
+;; #.excl::*negative-infinity-double* 
+
+;; #.excl::*nan-single*  #.excl::*infinity-single* 
+;; #.excl::*negative-infinity-single* 
+
+;; semantics for the float-nans is not specified in the proposed CL
+;; standard.  It may be, in fact, something we should specify....
+
+
+;; IEEE 754 defines invalid, underflow, overflow, divide-by-zero, inexact.
+;; for this model, only divide-by-zero and invalid can even happen.
+
+;; in medieval towns, rat-catchers roamed the streets...
+
+;; rat-dbyz-catch is an example of a program which can be
+;; used to interact with the exception handling.  In this
+;; case, (rat-dbyz-catch e val) evaluates the expression
+;; e and in case there is a divide by zero, returns the value
+;; represented by val.  If for some reason you wish a divide-by-zero in (f x)
+;; to return "1",  use  (rat-dbyz-catch (f x) 1)  instead of (f x).
+
+
+(defmacro rat-dbyz-catch (e val)
+  `(let* ((*rat-dbyz-trap-enable* t)
+	  (res (catch 'rat-dbyz ,e)))
+     (if (eq res 'rat-dbyz) ,val res)))
+
+;; the only place divide by zero can occur is reciprocal
+
+;; this shows how to catch "invalid"
+
+(defmacro rat-invalid-catch (e val)
+  `(let* ((*rat-invalid-trap-enable* t)
+	  (res (catch 'rat-invalid ,e)))
+     (if (eq res 'rat-invalid) ,val res)))
+
+;; this program is called when we are using or producing
+;; a NaN.  If we are set up to trap on invalid,
+;; it throws an to appropriate error catch program.
+;; otherwise it sets the global invalid flag and returns x.
+;; x is usually nil, but may be NaN.
+
+(defun check-invalid-trap(x)
+  	  (cond(*rat-invalid-trap-enable*
+		(throw 'rat-invalid 'rat-invalid))
+	       (t (setf *rat-invalid-flag* t)
+		  x)))
+
+;; sample lessp version with invalid
+
+(defun lessp (x y) ;; checks for invalid
+  (cond ((eq y nan-rat) (check-invalid-trap nil))
+        ((eql (denom x) 0)
+         (cond ((eql (denom y) 0) (< (numer x) 0 (numer y)))
+               ((eql (numer x) 1) nil)
+               ((eql (numer x) -1) t)
+               (t (check-invalid-trap nil))))
+        (t (< (* (numer x) (abs (denom y)))
+              (* (numer y) (abs (denom x)))))))
+
+;; sample greaterp version with invalid
+
+(defun greaterp (x y)
+  (cond ((eq y nan-rat) (check-invalid-trap nil))
+        ((eql (denom x) 0)
+         (cond ((eql (denom y) 0) (> (numer x) 0 (numer y)))
+               ((eql (numer x) 1) t)
+               ((eql (numer x) -1) nil)
+               (t (check-invalid-trap nil))))
+        (t (> (* (numer x) (abs (denom y)))
+              (* (numer y) (abs (denom x)))))))
+
+(defun create-erat-simple (x y)  ;; sample create-erat-simple with invalid
+;; this assumes  integers x and y, where x/y is in lowest terms etc.
+  (case y
+	(0 (cond ((eql x 0) (check-invalid-trap nan-rat))
+		 ((> x 0) inf-rat)
+		 ((< x 0) minf-rat)))
+	   
+	(1 x) ;just return the integer x
+	(t (make-instance 'erat 
+		   :numerator x
+		   :denominator y))))
+
+
+;; trapping on invalid can happen on any NaN producing operation. This
+;; is always done by create-erat-simple. The other place an invalid
+;; signal can occur is when an unordered operand is used in comparisons. 
+
+;; samples of greaterp and create-erat-simple are shown above.
+
+
+;; IEEE754 also specifies the setting of global flags on invalid, dbyz
+;; and other exceptions  so that even if they don't stop execution,
+;; they can be tested after a series of operations.  Here the flags
+;; are called *rat-dbyz-flag* and *rat-invalid-flag* .
+
+;; bottom line: what haven't we done here?
+
+;; THINGS WE MIGHT DO.
+;; signalling vs. quiet nans;
+;;  depending on their purpose, signalling nans could be non-numbers
+;;  like "uninitialized array element" or a real interval or another
+;;  number format like arbitrary precision floating point.
+
+;; the other 23 comparisons or a "compare and branch".
+;; remainder, difference, copysign, finite, isnan, unordered, class.
+;; 
+
+;; THINGS WE WOULD NOT DO (irrelevant in the rationals)
+;;   extra traps, namely inexact, over/underflow.
+;;   directed rounding modes 
+;;   square-root  (not closed in the rationals)
+;;   binary <-> decimal conversion (done by CL)
+;;   single/double/extended formats and their combinations
+;;   denormalized numbers and their consequences
+;;   scalb, logb, nextafter.
+
+;; next: intervals.
+
+
+From takyan@peoplesparc.Berkeley.EDU Fri Jun  7 11:44:05 1991
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA14829; Fri, 7 Jun 91 11:44:03 PDT
+Received: by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA09224; Fri, 7 Jun 91 11:46:19 PDT
+Date: Fri, 7 Jun 91 11:46:19 PDT
+From: takyan@peoplesparc.Berkeley.EDU (Tak Yan)
+Message-Id: <9106071846.AA09224@peoplesparc.Berkeley.EDU>
+To: fateman@peoplesparc.Berkeley.EDU
+Status: R
+
+% -*-LaTeX-*-
+\documentstyle[11pt]{article}
+
+\title{ Computation with the Extended Rational Numbers}
+
+\author{ Richard J. Fateman \\
+Tak W. Yan\\
+University of California, Berkeley}
+\begin{document}
+\maketitle
+\begin{abstract}
+There are several reasons to change even so basic a component
+of a computer algebra system as its underlying number system.
+We explain why and how changes to the rational number system may
+be useful, especially with respect to support of intervals.
+\end{abstract}
+
+\section{Introduction}
+
+It is well known that any rational number can be represented
+as an ordered pair of integers, namely numerator and denominator.
+In order to make this representation canonical, we usually
+impose the additional constraints that the greatest common divisor
+of numerator and denominator
+be 1, and that the denominator be positive.
+
+The rational operations of addition, subtraction,
+multiplication, and division, plus a variety of other useful
+operations (comparison, reading, writing)
+form a useful and often-programmed suite of routines in the
+construction of systems for ``symbolic and algebraic manipulation''.
+
+In an attempt to head off duplicative and incompatible
+names for such operations, the standard for Common Lisp includes data
+types and operations for exact rational numbers. Not everything has
+been specified, and the loose ends may be tied up in several ways.
+
+\section{Why extend the rationals?}
+
+There are two plausible rationales for extending the rational numbers.
+One is aesthetic.  The rationals form a field, and this is quite
+comfortable.  Aesthetically, however,
+one might wish to be able to close it under ``division by 0'' by
+adding a symbol $\infty$  (or the otherwise unused $1/0$)
+and defining appropriate meanings to all the operations. Since such an
+addition tends to propagate effects
+into many parts of a system, the aesthetic judgment
+really has to be weighed carefully after all these pieces are
+thought through.
+
+The second is utility.  If the extension makes it possible to write
+applications more easily or more plausibly correct, then it may
+be worthwhile.  For example, floating point number systems are
+in most ways less aesthetically pleasing than the real number system
+(or even the rationals) yet their utility for computer applications is
+well recognized.
+
+We argue that extension of the rationals in several ways produce
+substantially increased utility at minimal cost.
+Certainly a system that behaves
+in an essentially implementation-dependent fashion when
+instructed to divide
+by zero has lower utility than one which provides some information.
+
+\section{Rationals form a foundation}
+The significance of the rationals
+to symbolic manipulation is that they are often
+used as the basis for manipulation of polynomials and other
+more elaborate algebraic structures.  When the integer substructure
+is implemented in ``arbitrary precision'' arithmetic
+as has become quite standard in Lisp, the rationals do not suffer
+from round-off error, overflow, or underflow. The remaining ``problem''
+within the rational\footnote{
+square-root
+requires algebraic numbers, logarithm requires
+transcendental extensions.
+These are also of interest, but will not be discussed here.}
+operations is division by zero.
+It is a problem in the sense that it is the one operation under which
+any field is not closed. While a mathematics text simply
+does not ``allow'' this operation, a computer system must provide %
+{\sl some}
+action.
+What this should be is the concern of this paper.
+\section{An example}
+
+We must design a treatment for the
+cases of division of a (zero or non-zero) quantity by zero.
+One approach is to check for this case, give an error message, and
+retreat.
+Except for the work described below, all systems for rational
+arithmetic we are aware
+of assume that division by zero is a non-continuable error.
+
+An alternative which we prefer,
+is to continue the calculation, attempting to maintain
+some information as to how we left the field of rationals, with
+a hope that we may rejoin the rationals by some suitable further
+computation.   A simple example of this situation is the
+computation of $a+b/(c+1/d)$ which is defined for $d=0$
+as $a$ even though a division by zero has occurred.
+
+We describe a system that in effect
+retains a small but useful amount of information (1 bit) which
+indicates how we departed from the rational domain, and
+allows us to compute with either 
+two additional ``extended rational numbers'' 0/0 and 1/0,
+or a total of four additional symbols: the two above and symbols for
+negative infinity (-1/0) and negative zero (0/-1).  Each of these
+extended systems has a number of useful properties:
+\begin{enumerate}
+
+\item It is essentially cost-free in implementation, even compared to
+giving an error message and quitting. 
+\item
+It preserves all properties
+of the normal rational numbers when the extended numbers
+are not used.
+\item
+It allows some computations involving 0/0 or 1/0
+to proceed, correctly, to a useful and justifiable answer (e.g. 1/1 
+divided by 1/0 is 0/1). This is a natural computation in the context
+of continued fractions.
+\item
+It will produce an answer of the form $0/0$ or $1/0$ only when a more
+traditional system would have given a division by zero error at
+an earlier stage.
+\item
+The IEEE floating-point standard arithmetic system provides a model for
+treatment of infinities and ``not-a-numbers.'' Systems with
+floating-point support may have had to deal with elements 
+analogous to $0/0$ or	 $1/0$ and may therefore have made some key
+decisions in that context that can apply to rationals as well. In
+case these decisions have been left in abeyance, the models here
+may provide some impetus to make some progress there, too.
+\end{enumerate}
+
+The disadvantage of these extensions is
+ that some well-known theorems which apply to the field of
+rational numbers fail to hold with respect to
+0/0 and 1/0.
+The extent to which these violations constitute hazards
+is fairly limited \cite{kahan}.
+There are two exceptional circumstances in  cancellation:
+
+
+If $(a \cdot x)/(b \cdot x) \ne a/b$ then $(a \cdot x)/(b \cdot x) = 0/0$.
+
+If $(a-x) - (b -x) \ne a-b$ then $ (a-x) - (b - x) = 0/0$.
+
+There are two exceptional circumstances in distribution:
+
+If $a \cdot x + b \cdot x \ne (a+b) \cdot x$ then $a \cdot x + b\cdot  x = 0/0$.
+
+If $a/x +b/x \ne (a+b)/ x$ then $a/x + b/x = 0/0$.
+
+A rational expression can have at most two values in this system, and then only
+if one of them is 0/0.  
+
+\subsection{ Models}
+
+There are at least useful two models of dealing with infinities: 
+{\sl projective}
+or 
+{\sl  affine}.
+The projective model
+identifies +1/0 and -1/0 as a single infinity (one way of
+looking at this is to consider that the ``sign'' of the denominator
+is unknown, and this affects the ``sign'' of the infinity). The affine
+model, by contrast,
+has signed infinities, but as a consequence, also contains
+signed zeros.  As an experiment, we have programmed both models (and another
+described later) but
+find that the affine model seems to require somewhat
+additional checking in the
+algorithms for consistency. The cost is borne by the normal arithmetic
+routines, rather than in the error-handling routines. 
+The affine arithmetic model
+appears to be somewhat more utilitarian for the endpoints
+of intervals in implementing a more
+complete model of {\sl interval} arithmetic; the intervals themselves
+are more likely to be used as elements in a projective arithmetic system.
+
+\subsection{The 
+projective model}
+As  described below, this corresponds roughly to
+one that was proposed but then dropped as an option in 
+the IEEE 754 standard model for floating point arithmetic.
+Although the alternative, namely affine mode, appears to be the
+one to be adopted for the standard, the projective model is
+perhaps more appropriate for exact rational arithmetic intervals {\em per se}. 
+For the moment we will discuss it from the number perspective.
+ It tends
+to be more conservative in the sense of giving 0/0 (undefined)
+in more circumstances than the affine mode. It has exactly one infinity, 1/0.  -1/0 is
+never produced by arithmetic operations, and if provided as input,
+is converted to 1/0.
+
+The object 0/0  represents a canonical ``undefined'' number, which if
+operated on with any rational operation, produces 0/0.
+
+The object 1/0 is similar to 0/0 in many respects. Its one redeeming
+property is that its multiplicative inverse is 0.
+
+For the binary operations + and *, we give a table for the 
+logical cross-product,
+where  $0 = 0/1$, $1/0 = \infty$, $0/0$, and $x$ is a ``normal'' non-zero member
+of the rational field.
+
+The results of binary - and / can be deduced by the identities
+$a-b = a+(-b)$; $ a/b = a \times (1/b)$;  and the tables for (unary - and 1/.)
+
+In the case of comparisons,
+possible results include  T, F, T/F (true, false, or ``depends'')
+A comparison between two $0/0$'s always results in F.
+
+Since the projective model
+does not distinguish between -1/0 and 1/0, this preserves the identity
+1/(1/x) = x.  However, this means 1/0 + 1/0 = 0/0, since 
+the sign of 1/0 is undetermined.
+The otherwise apparently useful arithmetic rule 1/0 + 1/0 = 1/0 which
+might be available if 1/0 and -1/0 were signed infinities,
+is sacrificed for safety.
+
+\subsection{ Tables of Operations: Projective}
+reformat the tables for \TeX .
+
+{There are some controversial items here, for example,
+$\infty$ = $\infty$, yet $\infty$-$\infty$ is not 0.
+%.pp
+This is discussed in the IEEE floating point committee
+working group notes IEEE P754/82-2.19, in a reply by W. Kahan to
+W. Buchholz, (unpublished): 
+%.(qq
+Just as neither 0/0 nor $\infty$/$\infty$ cannot equal 1
+in general, so $\infty$-$\infty$ cannot equal 0 in general, despite that 0=0 and $\infty$=$\infty$.
+Attempts to remove these ostensible inconsistencies can only make
+matters worse.
+%.)qq
+You can ponder this, at length; others have. You may be relieved
+to realize that this
+does not interfere with the usual field operations on usual
+field elements, in any case.
+
+\subsection{Tricky points}
+%.pp
+First, the notion of gcd must be extended to  include non-positive
+integers; $gcd ( a,b ) = gcd ( |a|,|b| )$ and $ gcd(x,0) = gcd(0,x) = x $.
+Then the usual programs for addition, multiplication  and division
+of rational
+numbers represented as pairs of integers,
+hold for the operations which include 1/0 and 0/0.
+For example, to compute $a/b + c/d $, compute $r := ( ad+cb ) $,
+$s := bd$, and  $g := gcd(r,s)$. If $g = 0$ return $0/0$ else
+return $ ( r/g )/( s/g )$.\footnote{
+More elaborate programs are sometimes employed
+to multiply polynomial fractions.  Extracting the gcd of $b$ and $d$ first
+can sometimes result  in a more efficient calculation, since the cost
+of two smaller polynomials gcd's can be lower than the
+cost of a single gcd computation with larger inputs.  The use
+of two gcd computations probably has a lower or non-existent payoff
+in the integer fraction case, since integer arithmetic, even of the
+arbitrary-precision version which is used here, is fairly fast.
+}
+It is not necessary to examine any of the numerators $a$, $c$ or $r$ (for example,
+to see if they are 0).}
+\subsection{Affine Model}
+ discuss how this is more useful for interval analysis.
+\subsection{Tables of Operations: Affine}
+
+\section{Interval Arithmetic}
+
+A useful application of extended rational numbers is in 
+interval arithmetic \cite{kahan} \cite{vuillemin}. 
+Interval arithmetic can be implemented for both the projective and
+affine models. Though the affine model is a bit more
+hairy to implement, it is more appropriate and useful.
+
+Let $r$, $s$, $p$, and $q$ denote any extended rational
+number. If $r < s$, then 
+[$r$,$s$] is the {\sl interior} interval 
+$\{x \in$ {\bf R} $: r \leq x \leq s\}$ 
+and 
+[$s$,$r$] is the {\sl exterior} interval 
+$\{x \in$ {\bf R} $: x \leq r$ or $s \leq x\}$.
+[$r$,$r$] is the number $r$.
+[$-\infty$,$\infty$] represents {\bf R} while 
+[$\infty$,$-\infty$] represents the empty interval.
+In the following subsections, we discuss the operations on these
+intervals.
+
+\subsection{Addition}
+
+If any one of the end points of the two intervals is 0/0, 
+then the sum is [0/0,0/0].
+Otherwise, the sum of two 
+intervals [$r$,$s$] and [$p$,$q$] is [$r + p$,$s + q$]
+if $r \leq s, p \leq q$, or $r \leq s, p > q, r + p > s + q$, 
+or $r > s, p \leq q, r + p > s + q$. The sum
+is [$-\infty$, $\infty$] in all the other cases.
+
+\subsection{Subtraction}
+
+The negation of [$r$,$s$] is $-$[$r$,$s$] $=$ [$-s$,$-r$].
+
+\subsection{Multiplication}
+
+For multiplication, we apply the following rules {\bf \sl in order} to find
+the product.
+
+\begin{enumerate}
+
+\item If any one of the end points of the two intervals 
+is 0/0, the product is [0/0,0/0].
+
+\item If one of the intervals is empty,
+the product is the empty interval.
+
+\item If one of the interval is [$0$,$0$] and the other
+is [$\infty$,$\infty$] or
+[$-\infty$,$-\infty$], the product is [0/0,0/0]; otherwise it is [$0$,$0$].
+
+\item If one of the interval is [$-\infty$,$\infty$], the product is
+[$-\infty$,$\infty$].
+
+\item If one of the interval is exterior (with normal end points),
+say [$b$,$a$] with $a < b$, we split it
+into two intervals [$-\infty$,$a$] and [$b$,$\infty$]. The product
+is the union of the products of these intervals with the other multipland.
+(If both multiplands are exterior, the product will be the union of
+four intervals).
+
+\item Finally, if all the above fail, cross-multiply
+the end points of the intervals to get four extended
+rational numbers; let {\sl MAX} and {\sl MIN} be the maximum and minimum. 
+The product is
+[{\sl MIN}, {\sl MAX}].
+
+\end{enumerate}
+
+\subsection{Division}
+The reciprocal of [$r$,$s$] is $1/$[$r$,$s$] $=$ [$1/s$,$1/r$].
+
+\section {Acknowledgments}
+
+Thank WK, HR?, JC;
+sponsors
+
+\begin{thebibliography}{9}
+
+\bibitem{SANE} Apple SANE manual
+\bibitem{kahan} W. Kahan, A more complete interval arithmetic
+\bibitem{moore} Ramon E. Moore, Appl. of INt. Analysis
+\bibitem{steele} Guy L. Steele, Jr. CLtL 2nd ed
+\bibitem{IEEE} IEEE fp standard
+\bibitem{pascalSC} PascalSC etc.
+\bibitem{vuillemin} Jean Vuillemin, Exact Real Computer Arithmetic with 
+Continued Fractions, ...
+\end{thebibliography}
+
+\end{document}
+
+

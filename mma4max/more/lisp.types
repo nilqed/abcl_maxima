@@ -1,0 +1,224 @@
+From gls@Think.COM Fri Oct 12 13:47:18 1990
+Received: from Mail.Think.COM by ucbarpa.Berkeley.EDU (5.63/1.41)
+	id AA02284; Fri, 12 Oct 90 13:47:14 -0700
+Return-Path: <gls@Think.COM>
+Received: from Verdi.Think.COM by mail.think.com; Fri, 12 Oct 90 16:47:23 -0400
+Received: from ungar.think.com by verdi.think.com; Fri, 12 Oct 90 16:47:22 EDT
+From: gls@Think.COM (Guy Steele)
+Received: by ungar.think.com; Fri, 12 Oct 90 16:47:21 EDT
+Date: Fri, 12 Oct 90 16:47:21 EDT
+Message-Id: <9010122047.AA25319@ungar.think.com>
+To: fateman@ucbarpa.Berkeley.EDU
+Cc: gls@Think.COM
+In-Reply-To: Richard Fateman's message of Sat, 6 Oct 90 11:18:54 -0700 <9010061818.AA01002@ucbarpa.Berkeley.EDU>
+Subject: declarations in CL /also elem. fun. graphs
+Status: RO
+
+
+Sorry for the delay in replying; I've been out of town all week.
+
+I agree that #1 is correct Common Lisp and #2 is not correct Common
+Lisp.  I would strongly encourage your compiler people to consider
+implementing the TYPECASE solution.  (For that matter, the TYPECASE
+analysis can also apply to simple cases of IF with type predicates
+such as NUMBERP.)  Also, the more recent X3J13 amendments to the
+semantics of declarations would allow one to write:
+
+      (defun pnorm (x)
+	(if (numberp x)
+	    x
+	    (locally
+		(declare (simple-vector x))
+	      (pnorm (svref x 1)))))
+
+See CLTL 90, pp. 224-227.  This differs in verbosity from #2 only in
+the inclusion of the additional word LOCALLY and some parentheses,
+and this seems worthwhile to me in correctly delimiting the
+applicability of the declaration.  (I agree that using LET is
+semantic overkill.)  So you might want to put support for such type
+declarations in your compiler.  Until then, the LET solution isn't
+too bad; it's clumsy, but at least it is correct Common Lisp and
+therefore will port (for cases where that is an issue).
+
+Thanks for the feedback from Kahan about the pictures.  I am
+alway eager to get suggestions for improvements.
+
+--Guy
+
+From sayuri@franz.com Tue Nov  6 18:26:19 1990
+Received: from lassen.Berkeley.EDU by ucbarpa.Berkeley.EDU (5.63/1.41)
+	id AA12348; Tue, 6 Nov 90 18:26:16 -0800
+Received: from goldengatesparc.Berkeley.EDU by lassen.Berkeley.EDU (4.1/1.41)
+	id AA15065; Tue, 6 Nov 90 18:26:21 PST
+Received: from uunet.uu.net by goldengatesparc.Berkeley.EDU (4.1/1.42)
+	id AA04838; Tue, 6 Nov 90 18:24:26 PST
+Received: by uunet.uu.net (5.61/1.14) with UUCP 
+	id AA29647; Tue, 6 Nov 90 21:24:43 -0500
+Received: by franz.Franz.COM (MC 2.0/FI-1.0)
+	id AA05483; Tue, 6 Nov 90 17:05:48 PST
+Received: by fiona.Franz.COM (4.0/FI-1.0)
+	id AA12526; Tue, 6 Nov 90 17:04:51 PST
+From: sayuri@franz.com (Sayuri Nishimura)
+Message-Id: <9011070104.AA12526@fiona.Franz.COM>
+To: dooley@goldengatesparc.berkeley.edu, fateman@goldengatesparc.berkeley.edu
+Cc: bks@goldengatesparc.berkeley.edu, bugs@franz.com
+Subject: Re: [spr2183]: Composer/PCL failure
+Bh: append spr2183 expire
+Date: Tue, 06 Nov 90 17:04:50 PST
+Status: RO
+
+[Your problem report has been assigned a tracking id of spr2183.
+ Please use this id in the subject line of any mail related to
+ it so that we may better track communication on your inquiry.
+ Also, please adress mail to bugs@franz.com as well as to me
+ so that your questions can be answered if I am unavailable.]
+
+Your message:
+ >On attempting to start Composer we get the following error:
+ >
+ ><cl> (wt:composer)
+ >Error: attempt to call `pcl::|setf wt::active-region|' which is an undefined function.
+ >
+ >Restart actions (select using :continue):
+ > 0: prompt for a new function, instead of `pcl::|setf wt::active-region|'.
+ >
+ >Any suggestions?
+ >Sam Dooley
+ >dooley@Berkeley.EDU
+
+The problem is caused by the way PCL interns some symbols.  Starting
+Composer by
+  (let ((excl::*print-nickname* t)) (wt::compsoer))
+will solve the problem.  
+
+-----
+Sayuri Nishimura, Franz Inc.     1995 University Avenue, Suite 275
+sayuri@Franz.COM (internet)      Berkeley, CA  94704
+uunet!franz!sayuri (uucp)        Phone: (415) 548-3600; FAX: (415) 548-8253
+
+From smh@franz.com Wed Nov 14 14:36:18 1990
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA13746; Wed, 14 Nov 90 14:36:09 PST
+Received: from uunet.uu.net by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA06757; Wed, 14 Nov 90 14:35:39 PST
+Received: by uunet.uu.net (5.61/1.14) with UUCP 
+	id AA11007; Wed, 14 Nov 90 17:36:39 -0500
+Received: by franz.Franz.COM (MC 2.0/FI-1.0)
+	id AA17573; Wed, 14 Nov 90 13:04:58 PST
+Received: by fiona.Franz.COM (4.0/FI-1.0)
+	id AA04086; Wed, 14 Nov 90 13:04:44 PST
+Date: Wed, 14 Nov 90 13:04:44 PST
+From: smh@franz.com (Steve Haflich)
+Message-Id: <9011142104.AA04086@fiona.Franz.COM>
+To: fateman@peoplesparc.Berkeley.EDU
+Subject: Re: [spr2219] coerce extensions
+Bh: append spr2219 expire
+Cc: bugs@franz.com, dooley@peoplesparc.Berkeley.EDU,
+        fateman@peoplesparc.Berkeley.EDU
+Status: RO
+
+[This question has been assigned the tracking identifier "spr2219".
+Please refer to it in any followup communication.]
+
+   Date: Tue, 13 Nov 90 08:40:59 PST
+   From: fateman@peoplesparc.Berkeley.EDU (Richard Fateman)
+   To: cox@Franz.COM
+   Subject: coerce extensions
+
+   Is it possible to extend CL coerce so that
+   (for example)  bigfloats could be included as source and/or target?
+
+   I can supply programs that do the following coercions:
+
+   bigfloat -> rational, single, double, bigfloat (of difference precision)
+
+   and 
+   rational, single, double, integer -> bigfloat
+
+It isn't clear whether your bigfloat object is implemented as a
+discriminable lisp types (e.g. defstructs or clos instances) or merely
+as a storage convention (e.g. a list or vector or numbers) but it
+ultimately doesn't matter.  Common Lisp provides no mechanism for the
+user to extend COERCE.  You could play some games with compiler macros
+(available in Allegro 3.1 as defcmacro) but that would only solve the
+problem if the types are known at compile time.  You could play other
+games by placing advice on COERCE, but this has unfortunate runtime
+overhead.
+
+I suspect the original language designers intended compilers to be
+smarter about COERCE than they are, but it turns out that COERCE is a
+very generic function and usually in computational code there are more
+specialized and potentially more efficient conversion functions that
+can be substituted.  Couldn't you just substitute your specific
+conversion routines in place of COERCE without loss of code clarity?
+
+I think the backwardness and non-extensibility of COERCE derives from
+the fact that it is in fact rarely used by most coders, therefore
+removing its limitations has been unimportant.
+
+From smh@franz.com Wed Dec  5 15:18:59 1990
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA12278; Wed, 5 Dec 90 15:18:57 PST
+Received: from uunet.UU.NET by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA09567; Wed, 5 Dec 90 15:18:13 PST
+Received: by uunet.UU.NET (5.61/1.14) with UUCP 
+	id AA22351; Wed, 5 Dec 90 18:19:41 -0500
+Received: by franz.Franz.COM (MC 2.0/FI-1.0)
+	id AA08411; Wed, 5 Dec 90 14:41:22 PST
+Received: by fiona.Franz.COM (4.0/FI-1.0)
+	id AA06383; Wed, 5 Dec 90 14:42:17 PST
+Date: Wed, 5 Dec 90 14:42:17 PST
+From: smh@franz.com (Steve Haflich)
+Message-Id: <9012052242.AA06383@fiona.Franz.COM>
+To: fateman@peoplesparc.Berkeley.EDU
+Subject: Re: [spr2322] type specifiers
+Bh: append spr2322 expire
+Cc: bugs@franz.com
+Status: RO
+
+   Date: Mon, 3 Dec 90 11:58:35 PST
+   From: fateman@peoplesparc.Berkeley.EDU (Richard Fateman)
+   Subject: type specifiers
+
+   Is there a predicate that will tell me if a variable is
+   a type specifier?  That is, can x be used in the form
+   (typep foo x) ?
+
+   x should be either a built-in type, or a deftype / defstruct
+   item.  But how to test?
+
+The predicate isn't defined in the language, but it's a favorite
+subject for X3J13 to think about every year or two.  What happens is
+that everyone pretty much agrees of course there should be such a
+predicate, and that it wouldn't be too difficult to add it, but then
+someone else remembers the difficulties.  I can't remember all the
+problems right off hand, but certainly some of them center about the
+need to differentiate between the compilation (compile-file)
+environment and the running environment.  For example
+(type-specifier-p 'foo) might be false but a macro might want to see
+it as true for purposes of expanding during a file compilation if
+there was a defstruct foo or deftype foo earlier in the file.
+
+Anyway, if all _you_ really need to know is whether you can call typep
+on a particular object without an error being signalled, then you can
+of course test whether calling typep on a particular object returns
+without signalling error.  No joke intended:
+
+   (defun type-specifier-p (x)
+     (values (excl:errorset (typep nil x)))
+
+This isn't exactly the same as answering the question "Is x a valid
+type specifier?" because the implementation makes no guarantee to
+signal an error for invalid type specifiers.  I could imagine that
+
+   (typep nil '(array t (2 -3)))
+
+might not signal error whereas
+
+   (typep '#2a((1 2) (3 4)) '(array t (2 -3)))
+
+would signal error when it tripped over the bogus array type spec.
+But this approach might give you what you need.
+
+This question is spr2322 if you need more help.
+

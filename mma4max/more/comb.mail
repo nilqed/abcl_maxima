@@ -1,0 +1,24 @@
+From skiena@sbcs.sunysb.edu Fri Aug 21 14:11:01 1992
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA11313; Fri, 21 Aug 92 14:11:00 PDT
+Received: from sbcs.sunysb.edu by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA03974; Fri, 21 Aug 92 14:09:37 PDT
+Date: Fri, 21 Aug 92 17:16:01 -0400
+From: skiena@sbcs.sunysb.edu (Steve Skiena)
+Message-Id: <9208212116.AA06691@sbcs.sunysb.edu>
+Received: from sbskiena.cs.sunysb.edu by sbcs.sunysb.edu; Fri, 21 Aug 92 17:16:01 -0400
+To: fateman@peoplesparc.Berkeley.EDU
+Subject: Re:  Combinatorica in Lisp
+Cc: skiena@sbcs.sunysb.edu
+Status: R
+
+	Thanks a lot for your efforts.  It was kind of interesting
+to read your code.   This fall I intend to start working on developing
+the new version of the system, and one thought involves building part of
+it in Scheme.  If so, I'll dig up your code again to see if we can
+start from it.
+	Take care - hope to talk to you soon.
+
+Steve
+
+

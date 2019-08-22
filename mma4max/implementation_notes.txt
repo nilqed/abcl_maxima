@@ -1,0 +1,310 @@
+There are lots of details that need to be nailed down in
+making a computer algebra system, including parser,
+evaluator, and display.
+
+MockMMA is a skeleton of a computer algebra system, but
+with occasional substantial "meat" on the bones. It also
+has some wired-in decision that make it different in some
+respects from what is largely compatible with Mathematica.
+These decision have to do either with efficiency, or a
+disagreement about what should be done in certain cases.
+Also there may be subsidiary "fallout" from some of the
+decisions in unexpected ways.   One design decision is
+to provide (and use, in algorithms) a more efficient representation
+for polynomials and rational functions (an idea used
+in Macsyma).  Another is to
+make comparison of expressions for equality very fast by
+making unique copies of all distinct expressions (an idea
+used in Maple).
+
+An eval-once model (an idea in almost all non-Mathematica
+systems) is the default; providing an eval-until-it-seems-to
+not-change, as in Mathematica, is contemplated.
+
+This file is intended as an overview of the implementation,
+but does not provide all the details. Some moredored
+details are in the comments in the source files.dired
+
+(the parser)
+Our parser differs from Mathematica in a few ways.
+Several kinds of unlikely-looking expressions, corner-cases,
+are recognized differently. These are generally deliberate,
+though some results "fell out automatically" from our parser,
+and after some thought we decided they were better.
+
+1.2.3
+45/.45->60
+
+We decided that there was too much complication and inconsistency
+in the treatment of inequalities or equalities in MMA, and so
+we invented a new internal construct, Comparison.  Its use replaces
+a raft of other stuff, like Inequality, Less, Greater, etc.
+In our design  a==b is Comparison[a,Equal,b], and 
+a<b<=c  is Comparison[a,Less,b,LessEqual,c].  Comparison is
+also used for SameQ and UnsameQ.  
+
+There isan uncomfortable glitch in parsing in MMA concerning
+multiple-line expressions.  The parser, when reading from a file,
+continues on to the next line if it is still considering an expression
+which is incomplete.  Sometimes, however, an expression appears
+complete but is not. 
+
+a=b+c
++d
+
+We operate the same, though I'm not sure about whether we are requiring
+extra blank lines sometimes.
+
+The parser produces algebraic trees of the obvious form for Mathematica.
+The correspondence is almost complete described by MMA FullForm, with
+obvious replacements for [] and commas.  That is,
+f[a,b]  becomes (f a b) in Lisp.
+
+There is a nasty business having to do with capitalization.  A full
+ANSI compliant Common Lisp can use readtable-case to deal with this
+issue, but when a symbol, say member  is read in, and one wishes to
+access the Lisp symbol of the same name, the question arises as to
+whether the Lisp symbol is actually MEMBER.  In the standard setup
+that is exactly the situation, and so either the parser should up-case
+such identifiers, while retaining upper/lower for known symbols,
+and downcase such identifiers when displaying them.  Some lisps
+(Allegro, Scieneer) allow for Lisp symbols to have lower case names.
+We are using Allegro, but have made efforts to adapt to GCL as
+well -- GCL does not have readtable-case at all, making for
+even more discomfort. Symbols in the program (not visible to the
+user, though) have to be "escaped"  as |MatchQ|  etc.
+
+(pattern matcher)
+
+Outline:
+*Universal use of matcher for the interface to user.
+*Rules are stored in symbol table.
+*pre-optimization of rules: replacement of Optional  by Alternatives;
+*re-naming of pattern variables in a separate package.
+*storing of the optimized rules in a hash table.
+* backtracking, predicates, etc.
+* No uprules, repeated..
+
+(evaluator)
+
+Basically the evaluator program, meval, traverses an expression using
+the information in the global symbol table symtab, and information on
+the runtime stack, env, to produce an evaluated result from the
+expression.  The general guide for what the evaluator does is similar
+to the Mathematica evaluation process, but with a few changes
+(repairs) to the semantics, and with numerous features left out.
+Another change is that in converting from Mathematica to Lisp,
+operationally, MockMMa does considerably less explicit checking for
+erroneous situations. The consequence of this is that error situations
+(e.g. wrong numbers of arguments to commands) are passed along to a
+point where only relatively uninformative error messages may be
+generated.
+
+Also, the evaluator program can be modified rather substantially
+providing alternative versions of some basic concepts as arithmetic.
+One example is provided by reading in the bigfloat package (see below),
+which changes most floats to bigfloats.
+
+
+*stack and env. frames, push, change, pop,
+*unique conses so  equality is eq.
+*symbol table is a hash table symtab.
+*symbol table entries (ste) 
+
+We now make the ste out of a hash table.
+ It's plausible to change this to use defstruct ... then
+ make every declared ste a structure
+ with (at least) the following data  
+(a) value for the symbol  e.g.  a=3 in the value cell
+(b) value for expressions with the symbol as head. e.g. a[45]=x+1
+   we might have different "arities" e.g. a[45] has arity 1,
+   a[3,4] has arity=2, etc. [we don't use this now]
+(c) value for the collected attributes of the symbol.
+       e.g. Attributes[a] ={Orderless, Protected, Listable}
+(d) value for each of the attributes to make access fast with using member-test
+  on collected value  [we don't use this now]
+(e) value for function definition "built-in"  e.g. numeric cosine
+(f) value for user-defined function rules e.g. a[x_]:= ...
+   we could again use some "arity" discrimination if we expect
+   function definitions of different numbers of arguments. [we don't use this
+   now]
+(g) string for symbol printing (e.g. " + " for Plus). Except that
+  so far the Lisp symbol-name for Plus is Plus, so we don't need this.
+(h) formatting information. right now the List symbol-table entry e.g.
+  for Plus has the Plus formatter program stored
+(i) left/right operator precedence information; display stores this as above
+(k) derivative and integral info, as above
+(j) messages/ documentation
+(k) package? context?
+
+If we were to revise all this we could be more specific
+about possible types for the fields,
+e.g. for some of these..  (c): list; (d) bit-vector;
+(e) lisp-function-value; (f) list? array? (g) string; (h) program,
+(k) pattern or program
+
+See notes interspersed in eval.lisp
+
+Each symbol, e.g. x, y, when read in by parser is installed in the
+symbol table as its own little hash table.  (symbol table entry)
+which has space for value (global value would be under the key equal
+to the name itself), the function under the key SetDelayed, and
+values of subscripted item, e.g. x[1,2] under the key (1 2).
+*The program meval, mapply *evalonce*
+  Our evaluator differs from MMA in that it provides an option
+of either doing things the MMA, or evaluating once, as is
+done by Lisp (and essentially any other programming language
+of the conventional sort. Macsyma and Maple's programming mode
+work that way, but Maple's command line differs and does MMA
+kind of stuff)
+*mevalargs looks at the attributes of the head of the expression,
+and based on whether it has Attributes HoldAll, HoldRest, etc, selectively
+evaluates the arguments, as per MMA expectations.
+
+* Big difference from mma:  Unique copies of most things. Pro: testing two
+expressions for equality is very fast.  Downside is that destructive in-place
+operations are not possible. Things must be copied in such instances.
+Major visible impact is not so visible, but here it is.
+
+rr={a,b,c,d}
+rr[[3]]= 3
+  returns {a,b,3,d}  AND rr is NOT changed.
+
+to have the same effect as in Mathematica, do 
+rr=rr[[3]]=3
+
+
+ 
+*functions vs SetDelayed
+
+ Some functions are defined in Lisp. These include the standard
+Lisp functions like sin, cos, tan,  as well as the default Mockmma
+function Sin, Cos, Tan. There are some functions currently written
+in Lisp that could be written in Mockmma itself, like integration
+(Int) or D[].  Current practice is that if a function with name
+Xyz is defined in Lisp, any rules attached to Xyz will be ignored.
+This may be a bad default.
+
+
+
+(display)
+*Buildformat data-directed horizontal and vertical layer
+*disp running output
+
+(the programming language)
+* Module
+* TableMap, Do, Scan
+
+(numerics)
+*sin cos tan exp log etc etc
+
+(symbolics)
+* Simplification -- there is almost no simplification asserted routinely.
+* Rat converts an expression into a much simplified form essentially
+as a ratio of polynomials in which all "non-rational" kernels are 
+treated as algebraically independent objects.  Thus Sin[x] and Cos[x]
+are treated without knowledge of any identities. Potentially more
+upsetting, r=Exp[x] and s=Exp[-x] are independent even though r=1/s.
+The form used looks like a rational number times a product of polynomials
+to powers, positive or negative.  The negative powers are, naturally,
+the factors of the denominator.  Ordinarily this (partially) factored form is not canonical
+because it preserves factorization that might be known. Unless the factors
+are all multiplied out by RatExpand, equal items may appear different.
+Their difference should, however simplify to zero.
+
+There are programs for "general" simplification, and it is possible to
+hook them into the rule-based transformation system.  In eval.lisp there
+is an example of how Power can be simplified by default via a lisp
+program powersimp, but it is invoked via a rule, essentially:
+Power[u__]:= apply the lisp program powersimp to the arguments in the list u.
+  Other rules can override it.
+It is possible to Clear[Power] to remove all the rules for Power, entirely,
+including the Lisp program
+
+
+
+D (differentiation). Table lookup.
+The table of derivatives in file diffrat.lisp can and should
+be extended to include all functions of possible interest. This
+can be extended by lisp programming but can also be done by the user,
+using Gradef (see below).
+Associated with the "deriv" property of a lisp atom X  representing
+a function of n variables is a list of n functions. For
+many functions, e.g. Sin, Cos,  there is only one variable
+and so the deriv list has only one element that essentially
+computes the partial derivative, as a tree. In effect,
+the deriv property of Sin is (lambda(x) (list 'Cos x))
+
+Gradef:  This command provides a mechanism for the user
+to define function's derivatives without stating or
+even knowing the function definition itself. Thus
+D1[x_]:=-(1/(x*Sqrt[(1 - x)/(1 + x)]*(1 + x)))
+Gradef[ArcSech[x], D1]
+
+If the function has n>1 arguments, the derivatives are provided in
+a list:
+Gradef[WW, {DWW1, DWW2}].
+
+Naturally the chain rule is used so D[WW[x^2],x] is 2*x*DWW1[x^2,3].
+
+
+Int (integration) The major built-in program implements
+a derivative-divides routine. It knows many, but not all
+of the anti-derivatives for the functions known to 
+the D[] program, but currently not all of them. 
+It uses the derivatives newly defined by the user when
+possible, so that integrating u*du to get 1/2*u^2 is possible
+as, for example,  Int[2*x*WW[x^2,3]*DWW1[x^2,3],x] is
+computed as 1/2*WW[x^2,3]^2. 
+
+Int could use Albert Rich's Rubi,
+currently (3/2011) being tested.
+
+
+(interface)
+Interactive reading
+Batch reading   Batch is smart enough to parse some file names without
+quotes.  e.g. Batch["foo/bar.m"]  can also be typed Batch[foo/bar.m].
+
+Extras
+
+PrimeQ etc
+just plopped in this piece of code.
+
+Bigfloats.
+
+Currently in the subdirectory  more/ 
+there are 3 files bf.lisp, bfelem.lisp bfappend.lisp
+
+load them in (that order) and a bunch of definitions
+change.  In particular,  the meaning of rational floats
+is altered so that typing 3.1 no longer yields 31/10,
+but a bigfloat.
+If you set
+Precision=50
+1/3.
+you now get something like..
+Out[701] = 3.3333333333333333333333333333333333333333333333333*10^-1
+
+You can do arithmetic as well as compute Sin, Cos, and some other
+functions provided.
+
+
+
+Running Rubi..
+
+If your lisp has home directory mma4max, then
+(tl)
+Batch[rubi/newutility.m]
+Batch[rubi/CosCosRules.m]
+
+should get you a bunch of Rubi ready to go.  For test examples, see
+rubi/CosCosTest.m
+
+Also, lots of things not in that part of Rubi may work simply because
+there is a backup integration program in MockMMa for "derivative divides"
+integration.
+
+
+
+

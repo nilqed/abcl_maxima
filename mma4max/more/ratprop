@@ -1,0 +1,101 @@
+From fateman@peoplesparc.Berkeley.EDU Thu Feb 21 17:13:08 1991
+Received: from peoplesparc.Berkeley.EDU by centralsparc.Berkeley.EDU (4.1/1.42)
+	id AA06449; Thu, 21 Feb 91 17:13:05 PST
+Received: by peoplesparc.Berkeley.EDU (4.1/1.42)
+	id AA00428; Thu, 21 Feb 91 17:09:13 PST
+Date: Thu, 21 Feb 91 17:09:13 PST
+From: fateman@peoplesparc.Berkeley.EDU (Richard Fateman)
+Message-Id: <9102220109.AA00428@peoplesparc.Berkeley.EDU>
+To: cox@franz.com, jkf@franz.com, smh@franz.com, gls@think.com
+Cc: fateman@peoplesparc.Berkeley.EDU
+Subject: extended rational numbers in CL
+Status: R
+
+How hard would it be to change a CL system to 
+ make (/ 1 0) return the ratio 1/0 (a short-hand for infinity)? 
+and to make (/ 0 0) return the ratio 0/0 (a short-hand for indeterminate)?
+
+These are, in some sense, already "in" CL as IEEE values.  Perhaps an
+alternative would be to make these into IEEE Not-a-Numbers.
+
+Has anyone broached this subject in CL standardization?
+
+
+Is any of this stuff accessible at a level in Allegro CL that can be
+changed?
+
+
+
+There are addition, multiplication and division tables for the quantities
+1/0, -1/0, 0/0  combining with  r (a positive  rational or integer).
+
+e.g. (I haven't proofread this stuff carefully but...)
+
+*     r  1/0   -1/0  0/0
+  ---------------------
+r    r^2  1/0  -1/0  0/0
+-r  -r^2 -1/0   1/0  0/0
+1/0  1/0  1/0   -1/0 0/0
+-1/0 -1/0 -1/0  1/0  0/0
+0/0  0/0  0/0   0/0  0/0
+
+
++     r  1/0   -1/0  0/0
+ ----------------------
+r     2r  1/0  -1/0  0/0
+1/0  1/0  1/0   0/0  0/0
+-1/0 -1/0 0/0   0/0  0/0
+0/0  0/0  0/0   0/0  0/0
+
+
+/   r   -r   0   1/0  -1/0  0/0  (numerator)
+   ------------------------
+r   1   -1   0   1/0  -1/0  0/0
+-r  -1   1   0   -1/0  1/0  0/0
+0   1/0 -1/0 0/0  1/0 -1/0  0/0
+1/0  0   0   0    0/0  0/0  0/0
+-1/0 0   0   0    0/0  0/0  0/0
+0/0  0/0 0/0 0/0  0/0  0/0  0/0
+
+
+also, -0/0  -> 0/0 ;; -(1/0) -> -1/0   
+
+Additional rules  gcd(0,0)=0,
+gcd(0/0, anythingbutzero) = 0/0 
+gcd(1/0,r) is 1 ?
+gcd(-1/0,r) is -1 ?
+
+                1/0 -1/0  0/0
+
+rationalp        t    t    t
+plusp            t    nil nil
+minusp           nil  t   nil
+zerop            nil nil  nil
+
+comparisons
+
+all comparisons return nil if an argument is 0/0.
+otherwise -1/0 is less than any finite number or 1/0
+and 1/0 is greater than any finite number or -1/0.
+
+(I wrote all these above in Franz Lisp many years ago... surprisingly,
+the code is in many places SMALLER than would otherwise be the
+case if you were checking for division by zero).
+
+
+We also need to define
+exp log isqrt sin cos tan cis asin acos atan
+sinh cosh tanh asinh acosh atanh
+
+ signum ceiling floor truncate round numerator denominator mod.
+
+
+(The reason I raise this issue again, is that I would like to 
+use a system with these semantics, and I would prefer not to
+shadow everything in CL's number system.)
+
+Thanks,
+
+RJF
+
+

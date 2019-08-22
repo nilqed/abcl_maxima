@@ -1,0 +1,257 @@
+(* compare the results for testing match with Mathematica*)
+ SetAttributes[g,Orderless]
+ SetAttributes[h,Flat]
+ SetAttributes[gh,{Flat,Orderless}]
+m= Function[{pat,expr},MatchQ[expr,pat]]
+
+m[f[a | b, b], f[a, b]]
+m[f[a | b, b], f[b, b]]
+m[f[a_, b_, a_ | b_], f[x, y, y]]
+m[f[a_, b_, a_ | b_], f[x, y, x]]
+m[f[a_ | b_, a_, b_], f[x, x, y]]
+m[f[_, _], f[1, 2]]
+m[f[ww_, y], f[x, y]]
+m[f[_Integer, _], f[1, 2]]
+m[f[_Symbol, _], f[x, 2]]
+m[f[x__], f[a, b, c]]
+m[f[x___Symbol], f[x, y]]
+m[a:b_, xxx]
+m[f[x___Symbol], f[x, 2]]==False
+m[f[x___Integer, 2], f[1, 2]] 
+m[f[x___], f[1, y]]
+m[f[a__], f[1, 2]]
+m[f[a__, b__], f[1, 2]]
+m[f[a___, b__], f[1, 2]]
+m[P[a_, b_Sin], P[x, Sin[y]]]
+m[a:f[ b_], f[c]]
+m[w[a_, b_Sin], w[x, Sin[y]]]
+m[f[x_], f[a, b, c]]
+m[f[x__], f[a, b, c]]
+m[f[x___], f[a, b, c]]
+m[gh[a_, b_Sin], gh[Sin[y], x]]
+m[gh[a___, b_Sin], gh[Sin[y]]]
+m[f[a_ | b_, a_, b_], f[y, x, y]]
+m[f[a_ | b_, a_, b_], f[x, x, y]]
+m[q[a_, b_], q[1, 2]]
+m[q[a_, a_], q[1, 2]]
+m[x:f[z_], f[z[3]]]
+m[f[a, x_:0], f[a]]
+m[f[x_:0, a], f[a]]
+m[f[x_:0, a], f[xx, a]]
+
+m[w[a__], w[x, Sin[y]]]
+
+m[P[a__], P[x, Sin[y]]]
+
+m[P[a___], P[x, y, z]]
+
+m[f[a__, b__], f[1, 2, 3, 4]]
+
+m[f[a__, b__], f[1, 2]]
+m[q[a__, a__], q[1, 2]]
+m[g[a, b], g[a, b]]
+m[w[x_, a], w[b, a]]
+m[g[a, b, x_], g[a, c, b]]
+m[gh[a, b, x_], gh[a, c, b, d]]
+m[f[a, x_, b], f[a, c, b]]
+m[ff[x__, b], ff[b, a]]
+m[ff[x__, b], ff[a, b]]
+m[ff[x__, b], ff[a, c, b]]
+m[ff[a, x__, b], ff[a, c, b]]
+m[ff[a, x__, x__, b], ff[a, c, d, c, d, b]]
+m[f[a___, b__], f[1, 2, 3, 4]]
+m[r[x_, s[x_]], r[a, s[a]]]
+m[r[x__, s[x__]], r[a, b, s[a, b]]]
+m[r[x___, s[x___]], r[s[] ] ]
+m[f[x_:0, a], f[a]]
+m[w[x_, f[x_]], w[a, f[a]]]
+m[w[a, b], w[b, a]]
+m[w[Except[b]], w[a]]
+m[w[Except[b]], w[b]] == False
+m[a b, b a]
+m[g[a, b, x_], g[a, c, b]]
+m[a b c x_, a c b]
+m[a + b + c + x_, a + c + b]
+m[a + b + c + x_, a + c + b + 3 z]
+m[a + b + c + d e x_, a + c + b + d e]
+m[a + b + c + d e x_, a + c + b + d e f g]
+m[(d + YY) (e + ZZ), (d + YY) (e + ZZ)]
+m[(d + y_) (e + z_), (d + YY) (e + ZZ)]
+m[(d + YY) (e + ZZ), (YY + d) (e + ZZ)]
+m[a + Sin[a], Sin[a] + a]
+m[x_ + Sin[a], Sin[a]]
+m[g[a, b], g[b, a]]
+m[x1__, e + f]
+m[a + x_, a + b]
+m[a + x_, a + b + c]
+m[b + x_, a + b + c]
+m[a + b + z_, a + b]  (*False for WRI, we like z=0 *)
+m[a + b + z___, a + b]
+m[a + b + z__, a + b]
+m[a + x_., a]
+m[a + b + z___, a + b]
+m[a + b + z_, a + b]
+m[ff[x__, y__, x__], ff[a, b, a]]
+m[ff[x__, y___, x__], ff[a, a]]
+m[ww[a c, b y_], ww[a c, b d]]
+m[ww[a x_, b y_], ww[a c, b d]]
+m[ww[a x_, b y_], ww[a r s, b t u]]
+m[ww[a x_, b y_, z___], ww[a r s, b t u, 34, 35]]
+m[b y_ + a, a + b d]
+m[b y_ + x_, a + b d]
+m[b y_ + x_, a c + b d]
+m[b y_ + a x_, a c + b d]
+m[b x_ + a x_, a c + b d]
+m[x1___ + d + e, a + b + c + d + e]
+m[a + x1___ + c, a + b + c]
+m[x1__ + c + d + x2___, a + b + c + d + e]
+m[x1___ + c + d + x2___, a + b + c + d + e]
+m[g[a, b, x__], g[a, c, b]]
+m[x1___ + b + d, a + b + c + d + e]
+m[x_ + y_ + x_, a + b + a]
+m[x_ + y__ + x_, a + b + b + b + a]
+m[x_ + y__ + x_, a + b + b + b + a + c]
+m[gh[x_], gh[a, b, c]]
+m[gh[x_, b], gh[b, a]]
+m[x + PatternTest[y_, OddQ], x + 3]
+m[x + PatternTest[y_, OddQ], x + 4]
+m[PatternTest[y_, OddQ] + PatternTest[z_, Even], 3 + 4]
+m[y_Integer + z_, 3 + x + y]
+m[x_ + Sin[x_], Sin[a] + a]
+m[x__ + y__ + x__, a + b + c + a + b]
+m[f[a, b, x^n_. , c], f[a, b, x, c]]
+m[f[a, b, x^n_. , c], f[a, b, x, c]]
+m[f[a, b, x^n_.  , c], f[a, b, x^4 , c]]
+m[n_. q, q]
+m[n_. q r, q r]
+m[n_. q r, q r]
+m[n_. + r, r]
+m[f[a, b, x^n_. , c], f[a, b, x, c]]
+m[a + b + x^n_. + c, a + x + c + b]
+m[a + b + x^n_. + c, a + b + x^5 + c]
+m[b y_ z_ + a x_, a c + b d gg]
+m[x__ + y__ + x__, a + b + a]
+m[x_ + y__, a + b + a]
+m[x_ + y_ + x_, a + b + a]
+m[w[Cos[x_], Sin[x_]], w[Cos[a], Sin[a]]]
+m[Cos[x_] + Sin[x_], Cos[a] + Sin[a]]
+m[w[x__, x__], w[1, 2, 3, 1, 2, 3]]
+m[gh[x__, x__], gh[1, 2, 3, 1, 2, 3]]
+m[gh[x__, x__], gh[1, 1, 2, 2, 3, 3]]
+
+m[{Cos[c_.+d_.x_]^m_.,x_},{Cos[2+3*x],x}
+
+Do[print[i];If[i>4,Return[toobig]], {i,1,10}]
+q6= (#+6)&
+q6[5]
+Module[{x=3,y}, x+y]
+If[5>4,t,f]==t
+Every[a>0,{a,{3,4}}]
+Every[a>0,{a,{3,4,-1}}]
+
+FF [a_Sin | a_Cos]:= foo[a];
+{foo[Cos[z]], foo[Sin[z]], FF[Tan[z]]}=={foo[Cos[z]], foo[Sin[z]], FF[Tan[z]]}
+
+GG[u_[a_]]:=trig[u,a]/; MemberQ[{Sin,Cos,Tan,Sec,Cosec},u]
+GG[Sec[y]]==trig[Sec, y]
+
+
+
+w7[a_. x_^n_,x_] := a*x^(n+1)/(n+1)
+
+w7[10*z^2,z]==10/3*z^3
+
+w8[a_. x_^n_,x_] := a*x^(n+1)/(n+1) /; FreeQ[{a,n},x]&&n =!= -1
+
+Simp[D[w8[3/x^5,x]-3/x^5]]==0
+
+fact[x_]:=x*fact[x-1]
+
+fact[0]=1;
+
+fact[4]==24
+
+bfact[0]:=1
+
+bfact[x_]:=x*bfact[x-1]
+
+(* bfact[24] is an error for us, not mma. also nScot an error if bfact[0]=1 , not := *)
+
+
+(3+2 I /. 2->4) == 3+4 I
+
+ (3+2 I /. I->-I) == 3-2 I 
+
+(3+2 I /. I->J) == 3+2 J
+
+Simp[ (g[2]+g[1/2]+g[x^2]+g[x^(-2)]+g[-2] /. 2->4)- (g[4]+g[1/4] +g[x^4]+g[x^(-4)]+g[-4])]==0
+
+ValueofU[]:=u
+
+mm[u_]:=mm2[u,ValueofU[] ]
+
+mm[3]==mm2[3,u]
+
+Abs[Sin[4] +0.7568025]< 0.00001
+
+Abs[N[E+Pi]-5.859874482048838] < 0.0000001
+
+Table[i*j,{i,1,4},{j,{a,b,c}}]== {{a,b,c},{2a,2b,2c},{3a,3b,3c},{4a,4b,4c}}
+
+Re[3+4I]==3
+
+Map[Sin[#]+Cos[#]&,{a,b}] == {Sin[a]+Cos[a], Sin[b]+Cos[b]}
+
+ {SetAttributes[zz,Listable], zz[{a,b}]}== {{Listable}, {zz[a], zz[b]}}
+
+Sequence[1,1]//Equal
+
+Sequence[1,2]//Less
+
+Sequence[a,a,b]//SameQ == False
+
+ 1<2&&3>2
+
+2>1 || 1<2
+
+{i=3,i+=5} =={3,8}
+{i=3,i++,i,++i} =={3, 4, 4, 4}
+
+Table[D[f[z],z],{f,{Sin,Cos,Tan,Sec,Abs,Sinh,ArcCos,ArcTan,Exp,ExpIntegralEi}}]==
+{Cos[z],-Sin[z],(Sec[z])^2, Tan[z]* Sec[z], Abs[z]/z,Cosh[z], -(1-z^2)^(-1/2),1/(1+z^2), Exp[z],Exp[z]/z}
+
+Table[Int[f[z],z],{f,{Sin,Cos,Tan,Sec,Abs,ArcCos,ArcTan,Exp,ExpIntegralEi}}]==
+{-Cos[z], Sin[z], -Log[Cos[z]], 2 ArcTanh[Tan[1/2 z]], 1/2 z Abs[z], z ArcCos[z] - (1-z^2)^(1/2) , 1/2 (2 z ArcTan[z] - Log[1 + z^2]), Exp[z], -Exp[z] + z ExpIntegralEi[z]}
+
+ {x=3,Module[{x=4},x],x,Clear[x]} =={3,4,3,Null}
+
+ Module[{x},x] =!= x
+
+{Clear[k],k[a]:=aa,k[b]:=bb,k[a]+k[b],Clear[k],k[a]}=={Null,Null, Null, aa + bb, Null, k[a]}
+ (*because of total default rule ordering, result differs from mma *)
+
+{Clear[k],k[a]:=aa,k[x_]:=default[x],k[a]+k[b],Clear[k],k[a]}==
+{Null, Null, Null, default[a]+default[b], Null, k[a]}
+
+{k[x_]:=default[x],k[a]=aa,k[a]+k[b],Clear[k],k[a]}=={Null, aa, aa + default[b], Null, k[a]}
+
+
+(* because we optionally do NOT evaluate until no change, we get this:*)
+
+{Clear[x1,x2,x3], x2,x3,x3-x2}=={Null, x1=x2, x2=x3, x3 - x1} 
+
+
+{Clear[x1,x2], x1=5,Module[{x2=6},x1=10;x2=7;x2], x1,x2}  =={Null, 5, 7, 10, x2}
+
+Simp[D[EllipticE[x^2,m],x]- 2*x*Sqrt[1-m*Sin[x^2]^2]]==0
+
+(* define new derivatives, this of a secret function of 2 variables, shh, it's WW[x_,n_]:= Sin[x]/x^n  .. *)
+
+Gradef[WW, { (1/#1^(#2+1)*(#1*Cos[#1]-#2*Sin[#1]))& , (-1/#1^n * Log[#1]*Sin[#1])&} ]
+
+(* This way is easier to read .. *)
+{h1[x_,n_]:= 1/x^(n+1)*(x Cos[x]-n Sin[x]),  h2[x_,n_]:=-x^(-n)*Log[x]*Sin[x],    Gradef[WW,{h1,h2}]} =={Null, Null, WW}
+
+D[WW[x^2,Sin[x]],x]
+{v[Cos_]:=Cos+Cos[Cos], v[1]}=={Null, 1 + 1[1]}
+
