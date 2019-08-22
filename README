@@ -314,3 +314,65 @@ No unexpected errors found out of 11,637 tests.
 (%i2) quit();
  
 
+
+QuickLisp
+---------
+
+https://www.quicklisp.org/beta/
+https://www.quicklisp.org/beta/faq.html
+
+Load after installation: (load "quicklisp/setup.lisp")
+
+CL-USER(1): (load "quicklisp.lisp")
+STYLE-WARNING: ; Note: deleting unused local function LABELS PENDING-VALUE
+
+
+  ==== quicklisp quickstart 2015-01-28 loaded ====
+
+    To continue with installation, evaluate: (quicklisp-quickstart:install)
+
+    For installation options, evaluate: (quicklisp-quickstart:help)
+
+T
+
+
+(quicklisp-quickstart:install :path "./quicklisp")
+
+==================================================
+440,817 bytes in 0.41 seconds (1052.53KB/sec)
+; Fetching #<QL-HTTP:URL "http://beta.quicklisp.org/dist/quicklisp/2019-08-13/systems.txt">
+; 314.18KB
+==================================================
+321,717 bytes in 0.37 seconds (842.30KB/sec)
+
+  ==== quicklisp installed ====
+
+    To load a system, use: (ql:quickload "system-name")
+
+    To find systems, use: (ql:system-apropos "term")
+
+    To load Quicklisp every time you start Lisp, use: (ql:add-to-init-file)
+
+    For more information, see http://www.quicklisp.org/beta/
+
+NIL
+
+CL-USER(3): (ql:system-apropos :snark)
+#<QL-DIST:SYSTEM snark / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-agenda / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-auxiliary-packages / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-deque / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-dpll / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-examples / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-feature / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-implementation / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-infix-reader / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-lisp / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-loads / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-numbering / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-pkg / snark-20160421-git / quicklisp 2019-08-13>
+#<QL-DIST:SYSTEM snark-sparse-array / snark-20160421-git / quicklisp 2019-08-13>
+CL-USER(4): 
+
+
+
